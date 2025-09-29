@@ -1,7 +1,7 @@
 // src/App.jsx
 
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Outlet } from 'react-router-dom';
 import Navbar from './Components/Navbar';
 import Home from './Components/Home';
 import ArticlePage from './Components/ArticlePage';
@@ -12,7 +12,7 @@ import Footer from './Components/Footer';
 import ErrorBoundary from './Components/ErrorBoundary';
 import './App.css';
 
-const AppContent = () => {
+function App() {
   const location = useLocation();
   const showFooter = location.pathname !== '/admin/dashboard';
 
@@ -21,8 +21,9 @@ const AppContent = () => {
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/article/:articleId" element={<ArticlePage />} />
         <Route path="/current-affairs/:articleId" element={<ArticlePage />} />
-        <Route path="/tags/:tagId" element={<Home />} /> {/* New route for tags */}
+        <Route path="/tags/:tagId" element={<Home />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route 
           path="/admin/dashboard" 
@@ -35,14 +36,6 @@ const AppContent = () => {
       </Routes>
       {showFooter && <Footer />}
     </ErrorBoundary>
-  );
-}
-
-function App() {
-  return (
-    <Router>
-      <AppContent />
-    </Router>
   );
 }
 

@@ -78,17 +78,32 @@ const ArticlePage = () => {
   useEffect(() => {
     const fetchArticleData = async () => {
       setLoading(true);
+      setError(null);
+      
       try {
+        // Fetch main article
         const articleDocRef = doc(db, 'current-affairs', articleId);
         const articleDoc = await getDoc(articleDocRef);
 
-        if (articleDoc.exists()) {
-          let articleData = { id: articleDoc.id, ...articleDoc.data() };
+        if (!articleDoc.exists()) {
+          setError('Article not found');
+          setLoading(false);
+          return;
+        }
 
-          // Fetch all articles for navigation and related content
-          const allArticlesQuery = query(collection(db, 'current-affairs'), orderBy('date', 'desc'));
+        let articleData = { id: articleDoc.id, ...articleDoc.data() };
+
+        // Fetch navigation articles
+        try {
+          const allArticlesQuery = query(
+            collection(db, 'current-affairs'),
+            orderBy('date', 'desc')
+          );
           const allArticlesSnapshot = await getDocs(allArticlesQuery);
-          const allArticles = allArticlesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          const allArticles = allArticlesSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
 
           const currentIndex = allArticles.findIndex(art => art.id === articleId);
 
@@ -105,34 +120,26 @@ const ArticlePage = () => {
               title: allArticles[currentIndex + 1].title,
             };
           }
+        } catch (navError) {
+          console.warn('Error fetching navigation articles:', navError);
+        }
 
-          setArticle(articleData);
+        setArticle(articleData);
 
-          // Fetch related articles based on GS category and subjects
+        // Fetch related articles
+        try {
           let relatedQuery;
           if (articleData.domains?.gs) {
-            // First try to match by exact GS category
             relatedQuery = query(
               collection(db, 'current-affairs'),
               where('domains.gs', '==', articleData.domains.gs),
-              orderBy('date', 'desc'),
               limit(6)
             );
-          } else if (articleData.domains?.subjects?.length > 0) {
-            // If no GS category, use subjects
-            relatedQuery = query(
-              collection(db, 'current-affairs'),
-              where('domains.subjects', 'array-contains-any', articleData.domains.subjects),
-              orderBy('date', 'desc'),
-              limit(6)
-            );
-          }
 
-          if (relatedQuery) {
             const relatedSnapshot = await getDocs(relatedQuery);
             const processedData = relatedSnapshot.docs
-              .map(doc => ({ 
-                id: doc.id, 
+              .map(doc => ({
+                id: doc.id,
                 ...doc.data(),
                 isCurrentGs: doc.data().domains?.gs === articleData.domains?.gs
               }))
@@ -140,8 +147,8 @@ const ArticlePage = () => {
               .slice(0, 5);
             setRelatedArticles(processedData);
           }
-        } else {
-          setError('Article not found');
+        } catch (relatedError) {
+          console.warn('Error fetching related articles:', relatedError);
         }
       } catch (err) {
         console.error('Error fetching article:', err);
@@ -170,8 +177,8 @@ const ArticlePage = () => {
             <header className="article-header">
               {article?.domains && (
                 <div className="article-tags">
-                  <span className="tag gs-tag">{article.domains.gs}</span>
-                  {article.domains.subjects.map(subject => (
+                  {article.domains.gs && <span className="tag gs-tag">{article.domains.gs}</span>}
+                  {article.domains.subjects?.map(subject => (
                     <span key={subject} className="tag subject-tag">{subject}</span>
                   ))}
                 </div>
