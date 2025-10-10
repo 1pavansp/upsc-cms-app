@@ -51,13 +51,28 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
                 '& .MuiDrawer-paper': {
                     width: drawerWidth,
                     boxSizing: 'border-box',
-                    backgroundColor: 'white',
-                    color: '#475569',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    color: '#1a202c',
                     border: 'none',
-                    borderRight: '1px solid #e2e8f0',
+                    borderRight: '1px solid rgba(255, 255, 255, 0.2)',
+                    boxShadow: '0 8px 32px rgba(31, 38, 135, 0.3)',
                     height: 'calc(100% - 80px)',
                     top: '80px',
-                    zIndex: 1001
+                    zIndex: 1001,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: '4px',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        zIndex: 1
+                    }
                 },
             }}
         >
@@ -71,12 +86,12 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
                             <Typography
                                 key={index}
                                 variant="overline"
-                                sx={{
-                                    display: 'block',
-                                    px: 1,
-                                    py: 2,
-                                    color: '#64748b',
-                                    fontWeight: 600,
+                                                                sx={{
+                                                                    display: 'block',
+                                                                    px: 1,
+                                                                    py: 4,
+                                                                    color: '#64748b',
+                                                                    fontWeight: 600,
                                     fontSize: '0.75rem',
                                     letterSpacing: '0.1em'
                                 }}
@@ -91,27 +106,40 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
                             selected={activeTab === item.tab}
                             onClick={() => setActiveTab(item.tab)}
                             sx={{
-                                borderRadius: '8px',
+                                borderRadius: '12px',
                                 mb: 0.5,
-                                color: '#475569',
+                                color: '#1a202c',
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                backdropFilter: 'blur(10px)',
+                                WebkitBackdropFilter: 'blur(10px)',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                transition: 'all 0.3s ease',
                                 '&.Mui-selected': {
-                                    backgroundColor: '#f1f5f9',
-                                    color: '#0f172a',
+                                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                    color: '#3b82f6',
+                                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                                    boxShadow: '0 4px 15px rgba(59, 130, 246, 0.2)',
+                                    transform: 'translateY(-2px)',
                                     '&:hover': {
-                                        backgroundColor: '#f1f5f9',
+                                        backgroundColor: 'rgba(59, 130, 246, 0.25)',
+                                        transform: 'translateY(-3px)',
+                                        boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)',
                                     },
                                     '& .MuiListItemIcon-root': {
-                                        color: '#2563eb',
+                                        color: '#3b82f6',
                                     }
                                 },
                                 '&:hover': {
-                                    backgroundColor: '#f8fafc',
-                                    color: '#0f172a',
+                                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                    color: '#3b82f6',
+                                    transform: 'translateY(-2px)',
+                                    boxShadow: '0 4px 15px rgba(59, 130, 246, 0.2)',
+                                    border: '1px solid rgba(59, 130, 246, 0.2)',
                                 }
                             }}
                         >
                             <ListItemIcon sx={{ 
-                                color: activeTab === item.tab ? '#2563eb' : '#64748b',
+                                color: activeTab === item.tab ? '#3b82f6' : '#64748b',
                                 minWidth: 40 
                             }}>
                                 {item.icon}
@@ -128,7 +156,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
                 })}
             </List>
             <Box sx={{ flexGrow: 1 }} />
-            <Box sx={{ p: 2, borderTop: '1px solid #e2e8f0' }}>
+            <Box sx={{ p: 2, borderTop: '1px solid rgba(255, 255, 255, 0.2)' }}>
                 <Button
                     variant="outlined"
                     color="error"
@@ -136,14 +164,19 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
                     onClick={handleLogout}
                     fullWidth
                     sx={{
-                        borderRadius: '8px',
-                        py: 1,
+                        borderRadius: '12px',
+                        py: 1.5,
                         color: '#ef4444',
-                        borderColor: '#fee2e2',
-                        backgroundColor: '#fef2f2',
+                        border: '2px solid rgba(239, 68, 68, 0.3)',
+                        backgroundColor: 'rgba(254, 242, 242, 0.1)',
+                        backdropFilter: 'blur(10px)',
+                        WebkitBackdropFilter: 'blur(10px)',
+                        transition: 'all 0.3s ease',
                         '&:hover': {
-                            backgroundColor: '#fee2e2',
-                            borderColor: '#fecaca',
+                            backgroundColor: 'rgba(254, 226, 226, 0.2)',
+                            borderColor: '#ef4444',
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 8px 25px rgba(239, 68, 68, 0.3)',
                         }
                     }}
                 >

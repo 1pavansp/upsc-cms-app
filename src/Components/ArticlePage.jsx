@@ -1,39 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Calendar as CalendarIcon, Twitter, Facebook, Printer } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import 'react-quill/dist/quill.snow.css';
+import { formatDate, getDateRange } from '../utils/dateUtils';
 import './ArticlePage.css';
 
-const formatDate = (date) => {
-  if (!date) return '';
-  try {
-    let dateObj;
-    if (date.toDate) {
-      dateObj = date.toDate();
-    } else if (date.seconds) {
-      dateObj = new Date(date.seconds * 1000);
-    } else if (typeof date === 'string') {
-      dateObj = new Date(date);
-    } else if (date instanceof Date) {
-      dateObj = date;
-    } else {
-      return 'Invalid date';
-    }
-
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    }).format(dateObj);
-  } catch (error) {
-    console.error('Date formatting error:', error);
-    return 'Invalid date';
-  }
-};
 
 const ArticleActions = ({ article }) => {
   const articleUrl = window.location.href;
@@ -74,6 +49,54 @@ const ArticlePage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [error, setError] = useState(null);
   const [relatedArticles, setRelatedArticles] = useState([]);
+  const [filteredArticles, setFilteredArticles] = useState([]);
+  const [isDateFiltered, setIsDateFiltered] = useState(false);
+
+  // Function to fetch articles by specific date
+  const fetchArticlesByDate = async (date) => {
+    try {
+      const { startOfDay, endOfDay } = getDateRange(date);
+      
+      // Create Firestore timestamps
+      const startTimestamp = Timestamp.fromDate(startOfDay);
+      const endTimestamp = Timestamp.fromDate(endOfDay);
+      
+      // Fetch current affairs for the selected date
+      const affairsQuery = query(
+        collection(db, 'current-affairs'),
+        where('date', '>=', startTimestamp),
+        where('date', '<=', endTimestamp),
+        orderBy('date', 'desc')
+      );
+      
+      const affairsSnapshot = await getDocs(affairsQuery);
+      const dateFilteredArticles = affairsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          date: data.date ? data.date : new Date()
+        };
+      });
+      
+      setFilteredArticles(dateFilteredArticles);
+      setIsDateFiltered(true);
+    } catch (error) {
+      console.error('Error fetching articles by date:', error);
+      setFilteredArticles([]);
+    }
+  };
+
+  // Function to handle date selection
+  const handleDateChange = (date) => {
+    setSelectedDate(date);
+    if (date) {
+      fetchArticlesByDate(date);
+    } else {
+      setIsDateFiltered(false);
+      setFilteredArticles([]);
+    }
+  };
 
   useEffect(() => {
     const fetchArticleData = async () => {
@@ -277,11 +300,52 @@ const ArticlePage = () => {
             <div className="calendar-wrapper">
               <DatePicker
                 selected={selectedDate}
-                onChange={(date) => setSelectedDate(date)}
+                onChange={handleDateChange}
                 inline
               />
             </div>
           </div>
+
+          {isDateFiltered && (
+            <div className="sidebar-section">
+              <h3>
+                Articles from {formatDate(selectedDate)}
+                <button 
+                  onClick={() => {
+                    setIsDateFiltered(false);
+                    setFilteredArticles([]);
+                    setSelectedDate(new Date());
+                  }}
+                  style={{
+                    marginLeft: '0.5rem',
+                    padding: '0.2rem 0.4rem',
+                    fontSize: '0.7rem',
+                    background: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.2rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Clear
+                </button>
+              </h3>
+              {filteredArticles.length > 0 ? (
+                <ul className="event-list">
+                  {filteredArticles.map((article) => (
+                    <li key={article.id}>
+                      <Link to={`/current-affairs/${article.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                        <strong>{article.title}</strong>
+                        <p>{formatDate(article.date)}</p>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No articles found for this date</p>
+              )}
+            </div>
+          )}
 
           <div className="sidebar-section">
             <h3>Upcoming Events</h3>

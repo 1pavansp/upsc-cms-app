@@ -3,6 +3,7 @@ import Home from './Components/Home';
 import ArticlePage from './Components/ArticlePage';
 import AdminLogin from './Components/AdminLogin';
 import AdminDashboard from './Components/AdminDashboard';
+import ProtectedRoute from './Components/ProtectedRoute';
 import App from './App';
 
 export const router = createBrowserRouter([
@@ -32,7 +33,11 @@ export const router = createBrowserRouter([
       },
       {
         path: "admin/dashboard",
-        element: <AdminDashboard />
+        element: (
+          <ProtectedRoute>
+            <AdminDashboard />
+          </ProtectedRoute>
+        )
       }
     ]
   }

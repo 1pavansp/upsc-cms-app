@@ -2,46 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
 import { ArrowRight, Calendar as CalendarIcon } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { db } from '../firebase';
 import Quiz from './Quiz';
+import CommentSystem from './CommentSystem';
+import { formatDate, getDateRange, isSameDay } from '../utils/dateUtils';
 import './Home.css';
 
-// Function to format date
-const formatDate = (date) => {
-  if (!date) return '';
-  try {
-    // Handle different date formats
-    let dateObj;
-    if (date.toDate) {
-      // Firestore Timestamp
-      dateObj = date.toDate();
-    } else if (date.seconds) {
-      // Firestore Timestamp in object form
-      dateObj = new Date(date.seconds * 1000);
-    } else if (typeof date === 'string') {
-      // ISO string or other date string
-      dateObj = new Date(date);
-    } else if (date instanceof Date) {
-      // Already a Date object
-      dateObj = date;
-    } else {
-      return 'Invalid date';
-    }
-
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    }).format(dateObj);
-  } catch (error) {
-    console.error('Date formatting error:', error);
-    return 'Invalid date';
-  }
-};
 
 const Home = () => {
   const { tagId } = useParams(); // Add this line
@@ -52,9 +22,57 @@ const Home = () => {
   const [currentAffairs, setCurrentAffairs] = useState([]);
   const [latestUpdates, setLatestUpdates] = useState([]);
   const [dailyArticles, setDailyArticles] = useState([]);
+  const [filteredArticles, setFilteredArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isDateFiltered, setIsDateFiltered] = useState(false);
   // Removed featured articles state
+
+  // Function to fetch articles by specific date
+  const fetchArticlesByDate = async (date) => {
+    try {
+      const { startOfDay, endOfDay } = getDateRange(date);
+      
+      // Create Firestore timestamps
+      const startTimestamp = Timestamp.fromDate(startOfDay);
+      const endTimestamp = Timestamp.fromDate(endOfDay);
+      
+      // Fetch current affairs for the selected date
+      const affairsQuery = query(
+        collection(db, 'current-affairs'),
+        where('date', '>=', startTimestamp),
+        where('date', '<=', endTimestamp),
+        orderBy('date', 'desc')
+      );
+      
+      const affairsSnapshot = await getDocs(affairsQuery);
+      const dateFilteredArticles = affairsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          date: data.date ? data.date : new Date()
+        };
+      });
+      
+      setFilteredArticles(dateFilteredArticles);
+      setIsDateFiltered(true);
+    } catch (error) {
+      console.error('Error fetching articles by date:', error);
+      setFilteredArticles([]);
+    }
+  };
+
+  // Function to handle date selection
+  const handleDateChange = (date) => {
+    setSelectedDate(date);
+    if (date) {
+      fetchArticlesByDate(date);
+    } else {
+      setIsDateFiltered(false);
+      setFilteredArticles([]);
+    }
+  };
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -165,6 +183,82 @@ const Home = () => {
       <div className="page-layout">
         <div className="main-column">
           <div className="main-content-wrapper">
+            {/* Latest Updates Section - Moved to top */}
+            <section className="content-section">
+              <div className="section-card">
+                <h2>
+                  {isDateFiltered ? `Articles from ${formatDate(selectedDate)}` : 'Latest Updates'}
+                  {isDateFiltered && (
+                    <button 
+                      onClick={() => {
+                        setIsDateFiltered(false);
+                        setFilteredArticles([]);
+                        setSelectedDate(new Date());
+                      }}
+                      className="clear-filter-btn"
+                      style={{
+                        marginLeft: '1rem',
+                        padding: '0.25rem 0.5rem',
+                        fontSize: '0.8rem',
+                        background: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.25rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Clear Filter
+                    </button>
+                  )}
+                </h2>
+                {loading ? (
+                  <p>Loading updates...</p>
+                ) : (
+                  <div className="section-content">
+                    {isDateFiltered ? (
+                      filteredArticles.length > 0 ? (
+                        filteredArticles.map((article) => (
+                          <div key={article.id} className="content-item">
+                            <h3>
+                              <Link to={`/current-affairs/${article.id}`} className="content-link">
+                                {article.title}
+                              </Link>
+                            </h3>
+                            <div className="update-meta">
+                              {article.domains?.gs && <span className="category">{article.domains.gs}</span>}
+                              <span className="date">{formatDate(article.date)}</span>
+                            </div>
+                            <p className="summary">{article.content?.substring(0, 150)}...</p>
+                          </div>
+                        ))
+                      ) : (
+                        <p>No articles found for {formatDate(selectedDate)}</p>
+                      )
+                    ) : (
+                      latestUpdates.slice(0, 5).map((update) => (
+                        <div key={update.id} className="content-item">
+                          <h3>
+                            {update.isImportant && <span className="important-badge">Important</span>}
+                            {update.title}
+                          </h3>
+                          <div className="update-meta">
+                            <span className="category">{update.category}</span>
+                            <span className="date">{formatDate(update.date)}</span>
+                          </div>
+                          <p className="summary">{update.content}</p>
+                        </div>
+                      ))
+                    )}
+                    {!isDateFiltered && (
+                      <Link to="/updates" className="card-button">
+                        View All Updates <ArrowRight />
+                      </Link>
+                    )}
+                  </div>
+                )}
+              </div>
+            </section>
+
             <div className="main-sections-grid" style={{ marginTop: 0 }}>
               {/* Today's Quiz Section */}
               <section className="content-section">
@@ -218,56 +312,41 @@ const Home = () => {
                   )}
                 </div>
               </section>
-
-              {/* Latest Updates Section */}
-              <section className="content-section">
-                <div className="section-card">
-                  <h2>Latest Updates</h2>
-                  {loading ? (
-                    <p>Loading updates...</p>
-                  ) : (
-                    <div className="section-content">
-                      {latestUpdates.slice(0, 3).map((update) => (
-                        <div key={update.id} className="content-item">
-                          <h3>
-                            {update.isImportant && <span className="important-badge">Important</span>}
-                            {update.title}
-                          </h3>
-                          <div className="update-meta">
-                            <span className="category">{update.category}</span>
-                            <span className="date">{formatDate(update.date)}</span>
-                          </div>
-                          <p className="summary">{update.content}</p>
-                        </div>
-                      ))}
-                      <Link to="/updates" className="card-button">
-                        View All Updates <ArrowRight />
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              </section>
             </div>
 
-            {/* UPSC Syllabus Tracker Section */}
-            <section className="content-management-section">
-              <h2>UPSC Syllabus Tracker</h2>
-              <div className="syllabus-grid">
-                <div className="syllabus-card">
-                  <h3>General Studies Paper I</h3>
-                  <p>Track your progress for Indian Heritage and Culture, History and Geography of the World and Society.</p>
-                  <div className="progress-bar">
-                    <div className="progress" style={{width: '60%'}}></div>
+            {/* Prime Time Videos Section */}
+            <section className="prime-time-videos">
+              <h2>Prime Time Videos</h2>
+              <div className="videos-scroller">
+                <div className="video-card">
+                  <iframe src="https://www.youtube.com/embed/VIDEO_ID_1" title="Prime Time Video 1" allowFullScreen></iframe>
+                  <div className="video-card-content">
+                    <h3>Video Title 1</h3>
                   </div>
-                  <span>60% Complete</span>
                 </div>
-                <div className="syllabus-card">
-                  <h3>General Studies Paper II</h3>
-                  <p>Governance, Constitution, Polity, Social Justice and International relations.</p>
-                  <div className="progress-bar">
-                    <div className="progress" style={{width: '45%'}}></div>
+                <div className="video-card">
+                  <iframe src="https://www.youtube.com/embed/VIDEO_ID_2" title="Prime Time Video 2" allowFullScreen></iframe>
+                  <div className="video-card-content">
+                    <h3>Video Title 2</h3>
                   </div>
-                  <span>45% Complete</span>
+                </div>
+                <div className="video-card">
+                  <iframe src="https://www.youtube.com/embed/VIDEO_ID_3" title="Prime Time Video 3" allowFullScreen></iframe>
+                  <div className="video-card-content">
+                    <h3>Video Title 3</h3>
+                  </div>
+                </div>
+                <div className="video-card">
+                  <iframe src="https://www.youtube.com/embed/VIDEO_ID_4" title="Prime Time Video 4" allowFullScreen></iframe>
+                  <div className="video-card-content">
+                    <h3>Video Title 4</h3>
+                  </div>
+                </div>
+                <div className="video-card">
+                  <iframe src="https://www.youtube.com/embed/VIDEO_ID_5" title="Prime Time Video 5" allowFullScreen></iframe>
+                  <div className="video-card-content">
+                    <h3>Video Title 5</h3>
+                  </div>
                 </div>
               </div>
             </section>
@@ -317,29 +396,8 @@ const Home = () => {
             </section>
 
             {/* Comment Section */}
-            <section className="content-management-section comment-section">
-              <h2>Leave a Comment</h2>
-              <div className="comment-form-container">
-                <textarea
-                  className="comment-textarea"
-                  placeholder="Share your thoughts or ask a question..."
-                  rows="5"
-                ></textarea>
-                <button className="submit-comment-button">Submit Comment</button>
-              </div>
-              <div className="comments-list">
-                <h3>Recent Comments</h3>
-                <div className="comment-item">
-                  <p className="comment-author"><strong>Student A:</strong></p>
-                  <p className="comment-text">"The monthly magazines are incredibly helpful for current affairs!"</p>
-                  <span className="comment-date">2 days ago</span>
-                </div>
-                <div className="comment-item">
-                  <p className="comment-author"><strong>Student B:</strong></p>
-                  <p className="comment-text">"I appreciate the detailed analysis in the publications. Keep up the good work!"</p>
-                  <span className="comment-date">1 week ago</span>
-                </div>
-              </div>
+            <section className="comment-section">
+              <CommentSystem />
             </section>
 
             {/* Subscription Model Section */}
@@ -394,7 +452,7 @@ const Home = () => {
             <div className="calendar-wrapper">
               <DatePicker
                 selected={selectedDate}
-                onChange={(date) => setSelectedDate(date)}
+                onChange={handleDateChange}
                 inline
                 calendarClassName="sidebar-calendar"
                 showPopperArrow={false}
@@ -402,8 +460,6 @@ const Home = () => {
               />
             </div>
           </div>
-
-          
 
           {/* Important Links Section */}
           <div className="sidebar-section">

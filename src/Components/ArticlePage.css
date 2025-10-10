@@ -1,14 +1,16 @@
 /* General Article Page Layout */
 .main-content {
-  background-color: #f9fafb;
+  background: transparent;
+  position: relative;
 }
 
 .page-layout {
   display: flex;
-  gap: 2rem;
-  max-width: 1200px;
+  gap: 2.5rem;
+  max-width: 1300px;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 2rem 2rem;
+  position: relative;
 }
 
 .main-column {
@@ -23,23 +25,46 @@
 
 /* Article Header */
 .article-header {
-  margin-bottom: 1.5rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 2rem;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.article-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 20px 20px 0 0;
 }
 
 .article-title {
-  font-size: 2.25rem;
+  font-size: 2.5rem;
   font-weight: 800;
-  color: #111827;
+  color: var(--text-primary);
   line-height: 1.2;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 1;
 }
 
 .article-date {
-  font-size: 0.875rem;
-  color: #6b7280;
-  margin-bottom: 1rem;
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+  position: relative;
+  z-index: 1;
 }
 
 .article-tags {
@@ -385,21 +410,47 @@
 
 /* Sidebar */
 .sidebar-section {
-  background-color: white;
-  padding: 1.5rem;
-  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.3);
+  padding: 2rem;
   margin-bottom: 2rem;
-  border: 1px solid #e5e7eb;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 20px 20px 0 0;
+}
+
+.sidebar-section:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 16px 48px rgba(31, 38, 135, 0.4);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .sidebar-section h3 {
-  font-size: 1.25rem;
+  font-size: 1.3rem;
   font-weight: 700;
-  color: #111827;
-  margin-bottom: 1rem;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .calendar-wrapper .react-datepicker {
@@ -433,6 +484,7 @@
 @media (max-width: 1024px) {
   .page-layout {
     flex-direction: column;
+    padding: 1.5rem 1.5rem;
   }
   .sidebar {
     width: 100%;
@@ -440,11 +492,20 @@
 }
 
 @media (max-width: 768px) {
+  .page-layout {
+    padding: 1rem 1.5rem;
+  }
   .article-title {
     font-size: 1.875rem;
   }
   .article-navigation {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-layout {
+    padding: 0.5rem 1rem;
   }
 }
 
