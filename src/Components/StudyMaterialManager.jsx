@@ -18,13 +18,20 @@ const StudyMaterialManager = () => {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingMaterialData, setEditingMaterialData] = useState(null);
 
+    const civicCentreMaterials = [
+        { id: 'cc-1', title: 'UPSC - CSE(PRELIMS) 2025 PAPER-I (GENERAL STUDIES) KEY WITH AUTHENTIC SOURCES SET - B', type: 'PDF', category: 'Previous Year Papers', isCivicCentre: true },
+        { id: 'cc-2', title: 'UPSC - CSE(PRELIMS) 2025 SET - B PAPER-II (CSAT) KEY', type: 'PDF', category: 'Previous Year Papers', isCivicCentre: true },
+        { id: 'cc-3', title: 'APPSC GROUP-2 MAINS EXAMINATION 2025 PAPER-2 REFLECTED QUESTIONS FROM CIVICCENTRE IAS', type: 'PDF', category: 'Previous Year Papers', isCivicCentre: true },
+        { id: 'cc-4', title: 'APPSC GROUP-2 MAINS EXAMINATION 2025 PAPER-1 REFLECTED QUESTIONS FROM CIVICCENTRE IAS', type: 'PDF', category: 'Previous Year Papers', isCivicCentre: true },
+    ];
+
     useEffect(() => {
         const fetchMaterials = async () => {
             setLoading(true);
             try {
                 const querySnapshot = await getDocs(collection(db, 'studyMaterials'));
                 const materialsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setMaterials(materialsList);
+                setMaterials([...civicCentreMaterials, ...materialsList]);
             } catch (err) {
                 console.error("Error fetching materials:", err);
                 setError('Failed to fetch study materials.');
@@ -156,8 +163,8 @@ const StudyMaterialManager = () => {
                                             <TableCell>{material.type}</TableCell>
                                             <TableCell>{material.category}</TableCell>
                                             <TableCell align="right"> 
-                                                <IconButton color="primary" onClick={() => handleEditMaterial(material)}><EditIcon /></IconButton>
-                                                <IconButton color="error" onClick={() => handleDeleteMaterial(material.id, material.fileUrl)}><DeleteIcon /></IconButton>
+                                                <IconButton color="primary" onClick={() => handleEditMaterial(material)} disabled={material.isCivicCentre}><EditIcon /></IconButton>
+                                                <IconButton color="error" onClick={() => handleDeleteMaterial(material.id, material.fileUrl)} disabled={material.isCivicCentre}><DeleteIcon /></IconButton>
                                             </TableCell>
                                         </TableRow>
                                     ))

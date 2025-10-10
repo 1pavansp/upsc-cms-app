@@ -49,3 +49,4 @@ describe('DarkModeToggle', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(true);
   });
 });
+

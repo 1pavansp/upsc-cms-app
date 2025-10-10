@@ -67,3 +67,4 @@ describe('useDebounce', () => {
     expect(result.current).toBe('second');
   });
 });
+

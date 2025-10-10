@@ -235,7 +235,13 @@ const Home = () => {
                         <p>No articles found for {formatDate(selectedDate)}</p>
                       )
                     ) : (
-                      latestUpdates.slice(0, 5).map((update) => (
+                      [
+                          { id: 1, title: "UPSC CSE 2026-27 PCM Mentorship classes", content: "Mentorship classes for UPSC CSE 2026-27 PCM.", category: "UPSC", date: new Date() },
+                          { id: 2, title: "UPSC CSE Mains 2025 GS FLMT", content: "Full Length Mock Tests for UPSC CSE Mains 2025 GS.", category: "UPSC", date: new Date() },
+                          { id: 3, title: "Mains Sectional Tests Series 2025 Batch-2", content: "Batch-2 of Mains Sectional Tests Series for 2025.", category: "UPSC", date: new Date() },
+                          { id: 4, title: "Mains 2026 Naipunyata+ A Long Term Program", content: "A long term program for Mains 2026.", category: "UPSC", date: new Date() },
+                          { id: 5, title: "Mains 2025-26 NAIPUNYATA+", content: "NAIPUNYATA+ for Mains 2025-26.", category: "UPSC", date: new Date() },
+                        ].map((update) => (
                         <div key={update.id} className="content-item">
                           <h3>
                             {update.isImportant && <span className="important-badge">Important</span>}
@@ -316,36 +322,36 @@ const Home = () => {
 
             {/* Prime Time Videos Section */}
             <section className="prime-time-videos">
-              <h2>Prime Time Videos</h2>
+              <h2>Prime Time Videos from CivicCentre IAS</h2>
               <div className="videos-scroller">
                 <div className="video-card">
-                  <iframe src="https://www.youtube.com/embed/VIDEO_ID_1" title="Prime Time Video 1" allowFullScreen></iframe>
+                  <iframe src="https://www.youtube.com/embed/LaVeA1NBwh8" title="INTERNATIONAL RELATIONS | CURRENT AFFAIRS | CIVICCENTRE IAS" allowFullScreen></iframe>
                   <div className="video-card-content">
-                    <h3>Video Title 1</h3>
+                    <h3>INTERNATIONAL RELATIONS | CURRENT AFFAIRS</h3>
                   </div>
                 </div>
                 <div className="video-card">
-                  <iframe src="https://www.youtube.com/embed/VIDEO_ID_2" title="Prime Time Video 2" allowFullScreen></iframe>
+                  <iframe src="https://www.youtube.com/embed/F22d_p5tq2A" title="Polity Current Affairs | Weekly Current Affairs | CIVICCENTRE IAS" allowFullScreen></iframe>
                   <div className="video-card-content">
-                    <h3>Video Title 2</h3>
+                    <h3>Polity Current Affairs | Weekly Current Affairs</h3>
                   </div>
                 </div>
                 <div className="video-card">
-                  <iframe src="https://www.youtube.com/embed/VIDEO_ID_3" title="Prime Time Video 3" allowFullScreen></iframe>
+                  <iframe src="https://www.youtube.com/embed/ZJb6gZgC_A" title="S&T CURRENT AFFAIRS | WEEKLY CURRENT AFFAIRS | CIVICCENTRE IAS" allowFullScreen></iframe>
                   <div className="video-card-content">
-                    <h3>Video Title 3</h3>
+                    <h3>S&T CURRENT AFFAIRS | WEEKLY CURRENT AFFAIRS</h3>
                   </div>
                 </div>
                 <div className="video-card">
-                  <iframe src="https://www.youtube.com/embed/VIDEO_ID_4" title="Prime Time Video 4" allowFullScreen></iframe>
+                  <iframe src="https://www.youtube.com/embed/Y6P2n2_yD3c" title="Social Issues | Weekly Current Affairs | CIVICCENTRE IAS" allowFullScreen></iframe>
                   <div className="video-card-content">
-                    <h3>Video Title 4</h3>
+                    <h3>Social Issues | Weekly Current Affairs</h3>
                   </div>
                 </div>
                 <div className="video-card">
-                  <iframe src="https://www.youtube.com/embed/VIDEO_ID_5" title="Prime Time Video 5" allowFullScreen></iframe>
+                  <iframe src="https://www.youtube.com/embed/w-m4p3LgXyY" title="History & Art and Culture | Weekly Current Affairs | CIVICCENTRE IAS" allowFullScreen></iframe>
                   <div className="video-card-content">
-                    <h3>Video Title 5</h3>
+                    <h3>History & Art and Culture | Weekly Current Affairs</h3>
                   </div>
                 </div>
               </div>
