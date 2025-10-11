@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../firebase';
@@ -22,9 +21,6 @@ import LatestUpdatesForm from './LatestUpdatesForm';
 import ManageUpdates from './ManageUpdates';
 import ManageQuizzes from './ManageQuizzes';
 import ManageCurrentAffairs from './ManageCurrentAffairs';
-import QuestionBank from './QuestionBank';
-import UPSCSyllabusTracker from './UPSCSyllabusTracker';
-import StudyMaterialManager from './StudyMaterialManager'; // New import
 import PrimetimeVideoForm from './PrimetimeVideoForm';
 import ManagePrimetimeVideos from './ManagePrimetimeVideos';
 
@@ -66,7 +62,7 @@ const AdminDashboard = () => {
           alignItems: 'center',
           height: 'calc(100vh - 80px)',
           mt: '80px',
-          backgroundColor: '#f7f9fc'
+          backgroundColor: theme.palette.background.default
         }}
       >
         <CircularProgress />
@@ -153,12 +149,6 @@ const AdminDashboard = () => {
         return <ManageUpdates setEditingUpdate={setEditingUpdate} />;
       case 'manage-quizzes':
         return <ManageQuizzes setEditingQuiz={setEditingQuiz} />;
-      case 'question-bank':
-        return <QuestionBank />;
-      case 'upsc-syllabus-tracker':
-        return <UPSCSyllabusTracker />;
-      case 'study-materials':
-        return <StudyMaterialManager />;
       case 'manage-current-affairs':
         return <ManageCurrentAffairs setEditingArticle={setEditingArticle} />;
       case 'manage-primetime-videos':
@@ -173,8 +163,7 @@ const AdminDashboard = () => {
       sx={{
         display: 'flex',
         minHeight: '100vh',
-        backgroundColor: '#f2f6fb',
-        backgroundImage: 'linear-gradient(180deg, #f8fbff 0%, #eef3fb 100%)',
+        backgroundColor: theme.palette.background.default,
         pt: { xs: '72px', md: '80px' }
       }}
     >
@@ -216,10 +205,10 @@ const AdminDashboard = () => {
             aria-label="Open navigation"
             onClick={toggleSidebar}
             sx={{
-              border: '1px solid rgba(15, 23, 42, 0.12)',
+              border: `1px solid ${theme.palette.divider}`,
               borderRadius: 2,
-              color: '#152238',
-              backgroundColor: '#fff',
+              color: theme.palette.text.primary,
+              backgroundColor: theme.palette.background.paper,
               boxShadow: '0 4px 12px rgba(15, 23, 42, 0.08)'
             }}
           >
@@ -228,11 +217,11 @@ const AdminDashboard = () => {
           <Box sx={{ textAlign: 'right' }}>
             <Typography
               variant="subtitle1"
-              sx={{ fontWeight: 600, color: '#1f2937', letterSpacing: 0.4 }}
+              sx={{ fontWeight: 600, color: theme.palette.text.primary, letterSpacing: 0.4 }}
             >
               Admin Workspace
             </Typography>
-            <Typography variant="caption" sx={{ color: '#64748b' }}>
+            <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
               Manage UPSC CMS content on the go
             </Typography>
           </Box>
@@ -253,7 +242,7 @@ const AdminDashboard = () => {
             <Typography
               variant="h5"
               sx={{
-                color: '#1e293b',
+                color: theme.palette.text.primary,
                 fontWeight: 700,
                 fontSize: { xs: '1.4rem', md: '1.6rem' },
                 letterSpacing: '-0.01em'
@@ -264,7 +253,7 @@ const AdminDashboard = () => {
             <Typography
               variant="body2"
               sx={{
-                color: '#64748b',
+                color: theme.palette.text.secondary,
                 mt: 0.75,
                 maxWidth: 520,
                 lineHeight: 1.6
@@ -295,9 +284,9 @@ const AdminDashboard = () => {
             sx={{
               p: { xs: 2, sm: 3, md: 4 },
               borderRadius: '20px',
-              backgroundColor: 'rgba(255,255,255,0.95)',
+              backgroundColor: theme.palette.background.paper,
               backdropFilter: 'blur(14px)',
-              border: '1px solid rgba(148, 163, 184, 0.25)',
+              border: `1px solid ${theme.palette.divider}`,
               boxShadow: '0 16px 40px rgba(15, 23, 42, 0.08)',
               minHeight: { xs: 'auto', md: '60vh' }
             }}

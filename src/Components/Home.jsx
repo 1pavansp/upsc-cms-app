@@ -1,6 +1,6 @@
 // src/components/Home.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { collection, getDocs, query, orderBy, limit, where, Timestamp, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ArrowRight, Calendar as CalendarIcon } from 'lucide-react';
@@ -14,6 +14,8 @@ import PrimetimeVideos from './PrimetimeVideos';
 import './Home.css';
 import { extractYoutubeVideoId, getYoutubeEmbedUrl } from '../utils/videoUtils';
 import { civicCentrePath } from '../constants/civicCentre';
+
+const normalizeText = (value = '') => value?.toString().trim().toLowerCase();
 
 const GS_TAGS = ['GS1', 'GS2', 'GS3', 'GS4'];
 
@@ -37,6 +39,8 @@ const Home = () => {
   const [generatedOtp, setGeneratedOtp] = useState('');
   const [leadStatus, setLeadStatus] = useState({ type: null, message: '' });
   const [leadSubmitting, setLeadSubmitting] = useState(false);
+  const [quizLoading, setQuizLoading] = useState(true);
+  const [showLeadModal, setShowLeadModal] = useState(false);
 
   const resetQuizLeadState = (questionCount = 0) => {
     setQuizResponses(Array(questionCount).fill(null));
@@ -48,6 +52,78 @@ const Home = () => {
     setGeneratedOtp('');
     setLeadStatus({ type: null, message: '' });
     setLeadSubmitting(false);
+    setShowLeadModal(false);
+  };
+
+  const resolveQuizDate = (value) => {
+    if (!value) return new Date();
+    if (value instanceof Date) return value;
+    if (typeof value.toDate === 'function') return value.toDate();
+    if (typeof value === 'number' || typeof value === 'string') {
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+    }
+    if (value && typeof value === 'object' && 'seconds' in value) {
+      return new Date(value.seconds * 1000);
+    }
+    return new Date();
+  };
+
+  const buildQuizFromDoc = (doc) => {
+    if (!doc) return null;
+    const data = doc.data();
+    return {
+      id: doc.id,
+      ...data,
+      date: resolveQuizDate(data.date),
+      questions: Array.isArray(data.questions) ? data.questions : []
+    };
+  };
+
+  const applyQuizData = (quizData) => {
+    if (quizData) {
+      setTodaysQuiz(quizData);
+      const questionCount = quizData.questions?.length || 0;
+      resetQuizLeadState(questionCount);
+    } else {
+      setTodaysQuiz(null);
+      resetQuizLeadState(0);
+    }
+    setCurrentQuestion(0);
+    setSelectedOption(null);
+    setAnswerStatus(null);
+  };
+
+  const fetchQuizForDate = async (dateValue = new Date()) => {
+    try {
+      setQuizLoading(true);
+      const targetDate = dateValue instanceof Date ? dateValue : new Date(dateValue);
+      const { startOfDay, endOfDay } = getDateRange(targetDate);
+      const startTimestamp = Timestamp.fromDate(startOfDay);
+      const endTimestamp = Timestamp.fromDate(endOfDay);
+
+      const dateScopedQuery = query(
+        collection(db, 'daily-quiz'),
+        where('date', '>=', startTimestamp),
+        where('date', '<=', endTimestamp),
+        orderBy('date', 'desc'),
+        limit(1)
+      );
+
+      const snapshot = await getDocs(dateScopedQuery);
+
+      if (!snapshot.empty) {
+        const quizData = buildQuizFromDoc(snapshot.docs[0]);
+        applyQuizData(quizData);
+      } else {
+        applyQuizData(null);
+      }
+    } catch (error) {
+      console.error('Error fetching quiz for date:', error);
+      applyQuizData(null);
+    } finally {
+      setQuizLoading(false);
+    }
   };
 
   const handleLeadInputChange = (field) => (event) => {
@@ -66,12 +142,24 @@ const Home = () => {
 
   const isQuizAnswerCorrect = (question, optionIndex) => {
     if (!question) return false;
-    const { answer, options = [] } = question;
-    if (typeof answer === 'number') {
-      return optionIndex === answer;
+    const { options = [] } = question;
+    const answerValue = question.answer ?? question.correctAnswer;
+
+    if (typeof answerValue === 'number') {
+      return optionIndex === answerValue;
     }
-    const selected = options[optionIndex];
-    return selected === answer;
+
+    const numericIndex = Number(answerValue);
+    if (!Number.isNaN(numericIndex)) {
+      return optionIndex === numericIndex;
+    }
+
+    if (typeof answerValue === 'string') {
+      const selected = options[optionIndex];
+      return normalizeText(selected || '') === normalizeText(answerValue);
+    }
+
+    return false;
   };
 
   const computeQuizScore = (quizData, responses) => {
@@ -91,6 +179,37 @@ const Home = () => {
     }, 0);
   };
 
+  const buildMotivationMessage = (score, total) => {
+    const safeTotal = total || 0;
+    const mistakes = Math.max(safeTotal - score, 0);
+
+    if (safeTotal === 0) {
+      return 'Quiz submitted. Add questions in the admin panel to keep learners challenged.';
+    }
+
+    if (score === safeTotal) {
+      return `Outstanding! You aced every question (${score}/${total}). Keep this energy alive!`;
+    }
+
+    if (score === safeTotal - 1) {
+      return `So close to perfection! ${score}/${total} correct — revisit that one tricky question and you'll be unstoppable.`;
+    }
+
+    if (score >= Math.ceil(safeTotal * 0.7)) {
+      return `Great work! You’ve nailed ${score}/${total}. A little fine-tuning on the remaining ${mistakes} and you're golden.`;
+    }
+
+    if (score >= Math.ceil(safeTotal * 0.4)) {
+      return `Solid progress with ${score}/${total}. Focus on the ${mistakes} improvements and keep building momentum.`;
+    }
+
+    if (score > 0) {
+      return `Every step counts — ${score}/${total} today sets up a stronger attempt tomorrow. Stay curious and keep practising.`;
+    }
+
+    return `Every champion starts somewhere. Analyze the ${total} questions, revisit the concepts, and come back stronger!`;
+  };
+
   const handleQuizSubmit = () => {
     if (!todaysQuiz || !Array.isArray(todaysQuiz.questions) || todaysQuiz.questions.length === 0) {
       setLeadStatus({ type: 'error', message: 'Quiz data is unavailable right now.' });
@@ -106,27 +225,51 @@ const Home = () => {
     const totalForMessage = todaysQuiz.questions?.length ?? quizResponses.length;
     setQuizScore(score);
     setQuizSubmitted(true);
+    const motivationMessage = buildMotivationMessage(score, totalForMessage);
     setLeadStatus({
       type: 'info',
-      message: `Great job! You scored ${score}/${totalForMessage}. Share your details to receive important updates.`
+      message: motivationMessage
     });
+    setShowLeadModal(true);
   };
 
-  const handleSendOtp = () => {
+  const handleSendOtp = async () => {
     if (!quizLeadForm.mobile || quizLeadForm.mobile.length !== 10) {
       setLeadStatus({ type: 'error', message: 'Please enter a valid 10-digit mobile number before requesting an OTP.' });
       return;
     }
 
-    const generated = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOtp(generated);
-    setOtpSent(true);
-    setOtpVerified(false);
-    setQuizLeadForm(prev => ({ ...prev, otp: '' }));
-    setLeadStatus({
-      type: 'info',
-      message: `A verification OTP has been generated for demo purposes: ${generated}. Enter it below to confirm your number.`
-    });
+    try {
+      const generated = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedOtp(generated);
+      setOtpSent(true);
+      setOtpVerified(false);
+      setQuizLeadForm(prev => ({ ...prev, otp: '' }));
+
+      await addDoc(collection(db, 'quiz-otp-requests'), {
+        mobile: quizLeadForm.mobile,
+        otp: generated,
+        quizId: todaysQuiz?.id ?? null,
+        createdAt: serverTimestamp()
+      });
+
+      setLeadStatus({
+        type: 'info',
+        message: 'A verification OTP has been sent to your mobile number. Enter it below to confirm your subscription.'
+      });
+
+      // Optional: log for QA environments
+      if (import.meta?.env?.MODE !== 'production') {
+        console.info('Quiz OTP (development mode):', generated);
+      }
+    } catch (error) {
+      console.error('Error generating quiz OTP:', error);
+      setLeadStatus({
+        type: 'error',
+        message: 'We were unable to send the OTP right now. Please try again in a moment.'
+      });
+      setOtpSent(false);
+    }
   };
 
   const handleVerifyOtp = () => {
@@ -185,6 +328,7 @@ const Home = () => {
         type: 'success',
         message: 'Thank you! Your details have been saved. We will keep you posted with important updates.'
       });
+      setShowLeadModal(false);
     } catch (error) {
       console.error('Error saving quiz lead:', error);
       setLeadStatus({
@@ -201,7 +345,9 @@ const Home = () => {
   const activeTagId = isGsTag ? normalizedTagId : tagId;
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const selectedDateRef = useRef(new Date());
   const [isDateFiltered, setIsDateFiltered] = useState(false);
+  const isDateFilteredRef = useRef(false);
   // Removed featured articles state
 
   // Function to fetch articles by specific date
@@ -250,6 +396,7 @@ const Home = () => {
       });
       
       setFilteredArticles(dateFilteredArticles);
+      isDateFilteredRef.current = true;
       setIsDateFiltered(true);
     } catch (error) {
       console.error('Error fetching articles by date:', error);
@@ -257,50 +404,36 @@ const Home = () => {
     }
   };
 
+  const clearDateFilter = () => {
+    const today = new Date();
+    setIsDateFiltered(false);
+    isDateFilteredRef.current = false;
+    setFilteredArticles([]);
+    setSelectedDate(today);
+    selectedDateRef.current = today;
+    fetchQuizForDate(today);
+  };
+
   // Function to handle date selection
   const handleDateChange = (date) => {
+    if (!date) {
+      clearDateFilter();
+    return;
+  }
+
+  selectedDateRef.current = date;
     setSelectedDate(date);
-    if (date) {
-      fetchArticlesByDate(date);
-    } else {
-      setIsDateFiltered(false);
-      setFilteredArticles([]);
-    }
+    setIsDateFiltered(true);
+    isDateFilteredRef.current = true;
+    fetchArticlesByDate(date);
+    fetchQuizForDate(date);
   };
 
   useEffect(() => {
     const fetchContent = async () => {
       setLoading(true); // Set loading to true at the start of fetch
       try {
-        // Fetch Today's Quiz
-        const quizQuery = query(
-          collection(db, 'daily-quiz'),
-          orderBy('date', 'desc'),
-          limit(1)
-        );
-        const quizSnapshot = await getDocs(quizQuery);
-        if (!quizSnapshot.empty) {
-          const quizData = quizSnapshot.docs[0].data();
-          const formattedQuizData = {
-            id: quizSnapshot.docs[0].id,
-            ...quizData,
-            date: quizData.date ? quizData.date : new Date(),
-            questions: quizData.questions || []
-          };
-          setTodaysQuiz(formattedQuizData);
-          const questionCount = formattedQuizData.questions?.length || 0;
-          resetQuizLeadState(questionCount);
-          setCurrentQuestion(0);
-          setSelectedOption(null);
-          setAnswerStatus(null);
-        }
-        if (quizSnapshot.empty) {
-          setTodaysQuiz(null);
-          resetQuizLeadState(0);
-          setCurrentQuestion(0);
-          setSelectedOption(null);
-          setAnswerStatus(null);
-        }
+        await fetchQuizForDate(selectedDateRef.current || new Date());
 
         let currentAffairsBaseQuery = collection(db, 'current-affairs');
         let dailyArticlesBaseQuery = collection(db, 'current-affairs');
@@ -340,11 +473,11 @@ const Home = () => {
         setCurrentAffairs(currentAffairsArticles);
 
         // Fetch Daily Articles from Current Affairs
-        const articlesQuery = query(dailyArticlesBaseQuery, orderBy('date', 'desc'), limit(7));
+        const articlesQuery = query(dailyArticlesBaseQuery, orderBy('date', 'desc'), limit(5));
         const articlesSnapshot = await getDocs(articlesQuery);
         const dailyArticleList = articlesSnapshot.docs
           .map(normalizeArticle)
-          .filter(article => isValidTitle(article.title));
+          .filter(article => isValidTitle(article.title)).slice(0, 5);
         setDailyArticles(dailyArticleList);
 
         // Fetch Latest Updates
@@ -396,6 +529,10 @@ const Home = () => {
           setOtherGsCollections([]);
         }
 
+        if (isDateFilteredRef.current && selectedDateRef.current) {
+          await fetchArticlesByDate(selectedDateRef.current);
+        }
+
       } catch (err) {
         console.error("Error fetching content:", err);
         // Keep the default state values on error
@@ -418,6 +555,7 @@ const Home = () => {
   const heroCtaHref = civicCentrePath('/courses');
 
   const defaultSectionTitle = isGsTag ? `${activeTagId} Highlights` : 'Latest Updates';
+  const closeLeadModal = () => setShowLeadModal(false);
 
   return (
     <main className="main-content">
@@ -445,11 +583,7 @@ const Home = () => {
                   {isDateFiltered ? `Articles from ${formatDate(selectedDate)}` : defaultSectionTitle}
                   {isDateFiltered && (
                     <button 
-                      onClick={() => {
-                        setIsDateFiltered(false);
-                        setFilteredArticles([]);
-                        setSelectedDate(new Date());
-                      }}
+                      onClick={clearDateFilter}
                       className="clear-filter-btn"
                       style={{
                         marginLeft: '1rem',
@@ -553,7 +687,7 @@ const Home = () => {
               <section className="content-section">
                 <div className="section-card">
                   <h2>Today's Quiz</h2>
-                  {loading ? (
+                  {quizLoading ? (
                     <p>Loading quiz...</p>
                   ) : todaysQuiz ? (
                     <div className="section-content">
@@ -573,86 +707,122 @@ const Home = () => {
                         onQuizSubmit={handleQuizSubmit}
                         quizSubmitted={quizSubmitted}
                       />
-                      {leadStatus.message && (
+                      {leadStatus.message && !showLeadModal && (
                         <p className={`quiz-lead-status ${leadStatus.type || ''}`}>
                           {leadStatus.message}
                         </p>
                       )}
                       {quizSubmitted && (
-                        <div className="quiz-lead-wrapper">
-                          <h4>Stay Updated with CivicCentre IAS</h4>
-                          <p className="quiz-lead-score">
-                            You scored <strong>{quizScore}</strong> out of <strong>{todaysQuiz.questions?.length ?? quizResponses.length}</strong>.
-                            Share your details to receive regular updates and next steps.
-                          </p>
-                          <form className="quiz-lead-form" onSubmit={handleLeadSubmit}>
-                            <div className="quiz-lead-field">
-                              <label htmlFor="quiz-lead-name">Full Name</label>
-                              <input
-                                id="quiz-lead-name"
-                                type="text"
-                                value={quizLeadForm.name}
-                                onChange={handleLeadInputChange('name')}
-                                placeholder="Enter your name"
-                                required
-                              />
+                        <>
+                          {showLeadModal && (
+                            <div className="quiz-lead-modal">
+                              <div className="quiz-lead-backdrop" onClick={closeLeadModal} />
+                              <div className="quiz-lead-dialog quiz-lead-wrapper">
+                                <button
+                                  type="button"
+                                  className="quiz-lead-close"
+                                  onClick={closeLeadModal}
+                                  aria-label="Close lead capture form"
+                                >
+                                  &times;
+                                </button>
+                                <h4>Stay Updated with CivicCentre IAS</h4>
+                                <p className="quiz-lead-score">
+                                  You scored <strong>{quizScore}</strong> out of <strong>{todaysQuiz.questions?.length ?? quizResponses.length}</strong>.
+                                  Share your details to receive regular updates and next steps.
+                                </p>
+                                {leadStatus.message && (
+                                  <p className={`quiz-lead-status ${leadStatus.type || ''}`}>
+                                    {leadStatus.message}
+                                  </p>
+                                )}
+                                <form className="quiz-lead-form" onSubmit={handleLeadSubmit}>
+                                  <div className="quiz-lead-field">
+                                    <label htmlFor="quiz-lead-name">Full Name</label>
+                                    <input
+                                    id="quiz-lead-name"
+                                    type="text"
+                                    value={quizLeadForm.name}
+                                    onChange={handleLeadInputChange('name')}
+                                    placeholder="Enter your name"
+                                    required
+                                  />
+                                </div>
+                                <div className="quiz-lead-field">
+                                  <label htmlFor="quiz-lead-mobile">Mobile Number</label>
+                                  <input
+                                    id="quiz-lead-mobile"
+                                    type="tel"
+                                    value={quizLeadForm.mobile}
+                                    onChange={handleLeadInputChange('mobile')}
+                                    placeholder="10-digit mobile number"
+                                    required
+                                  />
+                                </div>
+                                  <div className="quiz-lead-actions">
+                                    <button
+                                      type="button"
+                                      className="quiz-lead-button secondary"
+                                      onClick={handleSendOtp}
+                                      disabled={leadSubmitting}
+                                    >
+                                      {otpSent ? 'Resend OTP' : 'Send OTP'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="quiz-lead-button secondary"
+                                      onClick={handleVerifyOtp}
+                                      disabled={!otpSent || leadSubmitting}
+                                    >
+                                      Verify OTP
+                                    </button>
+                                  </div>
+                                  <div className="quiz-lead-field otp-field">
+                                    <label htmlFor="quiz-lead-otp">Enter OTP</label>
+                                    <input
+                                    id="quiz-lead-otp"
+                                    type="text"
+                                    value={quizLeadForm.otp}
+                                    onChange={handleLeadInputChange('otp')}
+                                    placeholder="Enter the OTP"
+                                    disabled={!otpSent}
+                                    required
+                                  />
+                                </div>
+                                  <div className="quiz-lead-submit">
+                                    <button
+                                      type="submit"
+                                      className="quiz-lead-button primary"
+                                      disabled={!otpVerified || leadSubmitting}
+                                    >
+                                      {leadSubmitting ? 'Saving...' : 'Submit Details'}
+                                    </button>
+                                  </div>
+                                </form>
+                              </div>
                             </div>
-                            <div className="quiz-lead-field">
-                              <label htmlFor="quiz-lead-mobile">Mobile Number</label>
-                              <input
-                                id="quiz-lead-mobile"
-                                type="tel"
-                                value={quizLeadForm.mobile}
-                                onChange={handleLeadInputChange('mobile')}
-                                placeholder="10-digit mobile number"
-                                required
-                              />
-                            </div>
-                            <div className="quiz-lead-actions">
+                          )}
+                          {!showLeadModal && (
+                            <div className="quiz-lead-inline-cta">
+                              <p>Thanks for completing the quiz! Share your details to receive curated updates.</p>
                               <button
                                 type="button"
-                                className="quiz-lead-button secondary"
-                                onClick={handleSendOtp}
-                                disabled={leadSubmitting}
+                                className="quiz-lead-inline-button"
+                                onClick={() => setShowLeadModal(true)}
                               >
-                                {otpSent ? 'Resend OTP' : 'Send OTP'}
-                              </button>
-                              <button
-                                type="button"
-                                className="quiz-lead-button secondary"
-                                onClick={handleVerifyOtp}
-                                disabled={!otpSent || leadSubmitting}
-                              >
-                                Verify OTP
+                                Open Details Form
                               </button>
                             </div>
-                            <div className="quiz-lead-field otp-field">
-                              <label htmlFor="quiz-lead-otp">Enter OTP</label>
-                              <input
-                                id="quiz-lead-otp"
-                                type="text"
-                                value={quizLeadForm.otp}
-                                onChange={handleLeadInputChange('otp')}
-                                placeholder="Enter the OTP"
-                                disabled={!otpSent}
-                                required
-                              />
-                            </div>
-                            <div className="quiz-lead-submit">
-                              <button
-                                type="submit"
-                                className="quiz-lead-button primary"
-                                disabled={!otpVerified || leadSubmitting}
-                              >
-                                {leadSubmitting ? 'Saving...' : 'Submit Details'}
-                              </button>
-                            </div>
-                          </form>
-                        </div>
+                          )}
+                        </>
                       )}
                     </div>
                   ) : (
-                    <p>No quiz available for today</p>
+                    <p className="quiz-empty-state">
+                      {isDateFiltered
+                        ? `No quiz was published for ${formatDate(selectedDate || new Date())}. Check back soon for fresh questions.`
+                        : 'No quiz is available for today yet. Check back soon for a new challenge.'}
+                    </p>
                   )}
                 </div>
               </section>
@@ -817,7 +987,7 @@ const Home = () => {
               <div className="subscription-grid">
                 <div className="subscription-card">
                   <h3>Basic Plan</h3>
-                  <p className="price">₹499/month</p>
+                  <p className="price">Rs. 1499/month</p>
                   <ul>
                     <li>Access to Monthly Magazines</li>
                     <li>Daily Current Affairs</li>
@@ -834,7 +1004,7 @@ const Home = () => {
                 </div>
                 <div className="subscription-card featured-plan">
                   <h3>Premium Plan</h3>
-                  <p className="price">₹999/month</p>
+                  <p className="price">Rs. 1999/month</p>
                   <ul>
                     <li>All Basic features</li>
                     <li>Access to All Publications</li>
@@ -852,7 +1022,7 @@ const Home = () => {
                 </div>
                 <div className="subscription-card">
                   <h3>Annual Plan</h3>
-                  <p className="price">₹9999/year</p>
+                  <p className="price">Rs. 19999/year</p>
                   <ul>
                     <li>All Premium features</li>
                     <li>2 Months Free!</li>

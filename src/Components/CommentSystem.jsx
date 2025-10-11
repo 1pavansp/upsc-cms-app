@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { collection, addDoc, getDocs, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -71,6 +71,20 @@ const CommentSystem = () => {
       likes: 13
     }
   ]);
+  const [isMarqueePaused, setIsMarqueePaused] = useState(false);
+
+  const marqueeBase = useMemo(() => {
+    if (comments.length === 0) return [];
+    if (comments.length >= 4) return comments;
+
+    const repeats = Math.ceil(4 / comments.length);
+    return Array.from({ length: repeats }, () => comments).flat();
+  }, [comments]);
+
+  const marqueeItems = useMemo(() => {
+    if (marqueeBase.length === 0) return [];
+    return [...marqueeBase, ...marqueeBase];
+  }, [marqueeBase]);
 
   // Set fallback comments immediately
   useEffect(() => {
@@ -286,7 +300,7 @@ const CommentSystem = () => {
   };
 
   return (
-    <div>
+    <div className="comment-section">
       <h2>Community Comments</h2>
       
       {/* Comment Form */}
@@ -337,45 +351,49 @@ const CommentSystem = () => {
             <div className="loading-spinner" />
             <span>Loading comments...</span>
           </div>
-        ) : (
-          <div className="comments-list">
-            {comments.map((comment, index) => (
-              <div key={comment.id} className="comment-item">
-                <div className="comment-header">
-                  <div className="author-info">
-                    <div className="author-avatar">
-                      <User className="user-icon" />
-                    </div>
-                    <div className="author-details">
-                      <span className="author-name">{comment.author}</span>
-                      <span className="comment-time">
-                        <Clock className="time-icon" />
-                        {formatTime(comment.timestamp)}
-                      </span>
+        ) : comments.length > 0 ? (
+          <div
+            className={`comments-marquee ${isMarqueePaused ? 'paused' : ''}`}
+            onMouseEnter={() => setIsMarqueePaused(true)}
+            onMouseLeave={() => setIsMarqueePaused(false)}
+          >
+            <div className="comments-track">
+              {marqueeItems.map((comment, index) => (
+                <div key={`${comment.id}-${index}`} className="comment-item">
+                  <div className="comment-header">
+                    <div className="author-info">
+                      <div className="author-avatar">
+                        <User className="user-icon" />
+                      </div>
+                      <div className="author-details">
+                        <span className="author-name">{comment.author}</span>
+                        <span className="comment-time">
+                          <Clock className="time-icon" />
+                          {formatTime(comment.timestamp)}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="comment-content">
-                  <p>{comment.content}</p>
-                </div>
+                  <div className="comment-content">
+                    <p>{comment.content}</p>
+                  </div>
 
-                <div className="comment-actions">
-                  <button 
-                    className={`action-btn like-btn ${likes[comment.id] ? 'liked' : ''}`}
-                    onClick={() => handleLike(comment.id)}
-                  >
-                    <Heart className={`heart-icon ${likes[comment.id] ? 'liked' : ''}`} />
-                    <span>{comment.likes + (likes[comment.id] ? 1 : 0)}</span>
-                  </button>
-
+                  <div className="comment-actions">
+                    <button
+                      type="button"
+                      className={`action-btn like-btn ${likes[comment.id] ? 'liked' : ''}`}
+                      onClick={() => handleLike(comment.id)}
+                    >
+                      <Heart className={`heart-icon ${likes[comment.id] ? 'liked' : ''}`} />
+                      <span>{comment.likes + (likes[comment.id] ? 1 : 0)}</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        )}
-
-        {comments.length === 0 && !loading && (
+        ) : (
           <div className="no-comments">
             <MessageCircle className="empty-icon" />
             <p>No comments yet. Be the first to share your thoughts!</p>

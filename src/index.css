@@ -2,40 +2,56 @@
 
 /* Global Glassmorphism Variables */
 :root {
-  --glass-bg: rgba(255, 255, 255, 0.8);
-  --glass-border: rgba(255, 255, 255, 0.3);
+  /* Color Palette */
+  --brand-primary: #1e3a8a;
+  --brand-secondary: #10b981;
+  --brand-accent: #f97316;
+  --brand-link: #2563eb;
+  --brand-link-hover: #1d4ed8;
+
+  /* Light Mode Theme */
+  --background-body: #f8fafc;
+  --background-card: rgba(255, 255, 255, 0.8);
+  --border-card: rgba(226, 232, 240, 0.7);
+  --text-primary: #1f2937;
+  --text-secondary: #4b5563;
+  --text-light: #6b7280;
+
+  /* Gradients & Shadows */
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   --glass-backdrop: blur(10px);
   --primary-gradient: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   --secondary-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  --accent-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  --light-gradient: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-  --text-primary: #1f2937;
-  --text-secondary: #4b5563;
-  --text-light: #6b7280;
+
+  /* Sizing & Spacing */
   --border-radius: 12px;
   --border-radius-lg: 16px;
-  --spacing-xs: 0.5rem;
   --spacing-sm: 1rem;
   --spacing-md: 1.5rem;
   --spacing-lg: 2rem;
-  --spacing-xl: 3rem;
 }
 
 /* Dark Mode Variables */
 .dark {
-  --glass-bg: rgba(17, 24, 39, 0.8);
-  --glass-border: rgba(75, 85, 99, 0.3);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  /* Dark Mode Theme */
+  --brand-primary: #60a5fa;
+  --brand-link: #60a5fa;
+  --brand-link-hover: #93c5fd;
+  --background-body: #111827;
+  --background-card: rgba(30, 41, 59, 0.8);
+  --border-card: rgba(75, 85, 99, 0.5);
   --text-primary: #f9fafb;
   --text-secondary: #d1d5db;
   --text-light: #9ca3af;
+
+  /* Dark Mode Shadows */
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 body {
   margin: 0;
   font-family: 'Inter', sans-serif;
-  background: #f8fafc;
+  background: var(--background-body);
   color: var(--text-primary);
   line-height: 1.6;
   min-height: 100vh;
@@ -45,7 +61,7 @@ body {
 }
 
 .dark body {
-  background: #111827;
+  background: var(--background-body);
   color: var(--text-primary);
 }
 

@@ -4,35 +4,55 @@ const normalizeText = (value = '') => value.toString().trim().toLowerCase();
 
 const resolveAnswerText = (question) => {
   if (!question) return '';
-  const { answer, options = [] } = question;
-  if (typeof answer === 'number') {
-    return options[answer] ?? '';
+  const { options = [] } = question;
+  const answerValue = question.answer ?? question.correctAnswer;
+
+  if (typeof answerValue === 'number') {
+    return options[answerValue] ?? '';
   }
-  if (typeof answer === 'string') {
-    const numericIndex = Number(answer);
+
+  if (typeof answerValue === 'string') {
+    const numericIndex = Number(answerValue);
     if (!Number.isNaN(numericIndex) && options[numericIndex] !== undefined) {
       return options[numericIndex];
     }
-    const normalizedAnswer = normalizeText(answer);
+    const normalizedAnswer = normalizeText(answerValue);
     const matchedOption = options.find(option => normalizeText(option) === normalizedAnswer);
-    return matchedOption ?? answer;
+    return matchedOption ?? answerValue;
   }
+
   return '';
 };
 
 const isOptionCorrect = (question, optionIndex) => {
   if (!question) return false;
-  const { answer, options = [] } = question;
-  if (typeof answer === 'number') {
-    return optionIndex === answer;
+  const { options = [] } = question;
+  const answerValue = question.answer ?? question.correctAnswer;
+
+  if (typeof answerValue === 'number') {
+    return optionIndex === answerValue;
   }
-  const numericIndex = Number(answer);
+
+  const numericIndex = Number(answerValue);
   if (!Number.isNaN(numericIndex)) {
     return optionIndex === numericIndex;
   }
-  const selected = options[optionIndex];
-  return normalizeText(selected) === normalizeText(answer);
+
+  if (typeof answerValue === 'string') {
+    const selected = options[optionIndex];
+    return normalizeText(selected) === normalizeText(answerValue);
+  }
+
+  return false;
 };
+
+const successMessageForAnswer = (answerText) =>
+  answerText
+    ? `Great job! "${answerText}" is the right pick - keep the momentum going.`
+    : 'Great job! Keep the momentum going.';
+
+const growthMessage =
+  'Every misstep is a clue. Revisit the concept, stay curious, and you will nail it next time.';
 
 const Quiz = ({
   quiz,
@@ -55,7 +75,37 @@ const Quiz = ({
   const question = quiz.questions[currentQuestion];
   const storedResponses = Array.isArray(userResponses) ? userResponses : [];
   const allAnswered = storedResponses.length === totalQuestions && storedResponses.every(resp => resp !== null && resp !== undefined);
-  const correctAnswerText = resolveAnswerText(question);
+  const rawResolvedAnswer = resolveAnswerText(question);
+  const derivedAnswerText = (() => {
+    if (rawResolvedAnswer && rawResolvedAnswer.toString().trim().length > 0) {
+      return rawResolvedAnswer;
+    }
+    if (question) {
+      const answerValue = question.answer ?? question.correctAnswer;
+      if (typeof answerValue === 'number') {
+        const option = question.options?.[answerValue];
+        if (option && option.toString().trim()) {
+          return option;
+        }
+        return `Option ${answerValue + 1}`;
+      }
+      if (typeof answerValue === 'string' && answerValue.trim()) {
+        return answerValue;
+      }
+      if (Array.isArray(question.options)) {
+        const correctIndex = question.options.findIndex((_, idx) => isOptionCorrect(question, idx));
+        if (correctIndex !== -1) {
+          const optionValue = question.options[correctIndex];
+          if (optionValue && optionValue.toString().trim()) {
+            return optionValue;
+          }
+          return `Option ${correctIndex + 1}`;
+        }
+      }
+    }
+    return null;
+  })();
+  const hasResolvableAnswer = typeof derivedAnswerText === 'string' && derivedAnswerText.trim().length > 0;
 
   const handleOptionClick = (index) => {
     if (quizSubmitted) return;
@@ -107,22 +157,23 @@ const Quiz = ({
     <div className="quiz-content">
       <h4>Question {currentQuestion + 1} of {totalQuestions}</h4>
       <p className="question-text">{question.question}</p>
-
       <ul className="quiz-options">
         {question.options.map((option, idx) => {
           const isSelected = selectionForCurrent === idx;
           const optionIsCorrect = isOptionCorrect(question, idx);
 
           let optionClass = 'quiz-option';
-          if (isSelected) {
-            optionClass += ' selected';
-          }
+
           if (selectionForCurrent !== null || quizSubmitted) {
             if (optionIsCorrect) {
               optionClass += ' correct';
-            } else if (isSelected && !optionIsCorrect) {
+            } else if (isSelected) {
               optionClass += ' wrong';
             }
+          }
+
+          if (isSelected) {
+            optionClass += ' selected';
           }
           if (quizSubmitted) {
             optionClass += ' locked';
@@ -142,12 +193,24 @@ const Quiz = ({
         })}
       </ul>
 
-      {selectionForCurrent !== null && (
+      {selectionForCurrent !== null && answerStatus && (
         <div className={`quiz-feedback ${answerStatus}`}>
           {answerStatus === 'correct' ? (
-            <>Correct! Well done!</>
+            <>
+              <strong>Correct!</strong>
+              <p className="quiz-feedback-note">
+                {successMessageForAnswer(derivedAnswerText || '')}
+              </p>
+            </>
           ) : (
-            <>Wrong! The correct answer is: {correctAnswerText}</>
+            <>
+              <strong>Keep Going!</strong>
+              <p className="quiz-feedback-note">{growthMessage}</p>
+              <p className="quiz-feedback-answer">
+                Correct answer:&nbsp;
+                <span>{hasResolvableAnswer ? derivedAnswerText : 'Answer key not provided'}</span>
+              </p>
+            </>
           )}
         </div>
       )}

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Drawer,
@@ -65,9 +64,6 @@ const Sidebar = ({
       { text: 'Manage Content', type: 'header' },
       { text: 'Current Affairs', icon: <ListAltIcon />, tab: 'manage-current-affairs' },
       { text: 'Quizzes', icon: <ManageSearchIcon />, tab: 'manage-quizzes' },
-      { text: 'Question Bank', icon: <QuizIcon />, tab: 'question-bank' },
-      { text: 'UPSC Syllabus Tracker', icon: <ListAltIcon />, tab: 'upsc-syllabus-tracker' },
-      { text: 'Study Materials', icon: <ArticleIcon />, tab: 'study-materials' },
       { text: 'Primetime Videos', icon: <VideoLibraryIcon />, tab: 'manage-primetime-videos' },
       { text: 'Updates', icon: <EditIcon />, tab: 'manage-updates' }
     ],

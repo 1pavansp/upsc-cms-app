@@ -84,6 +84,30 @@
   background: #b91c1c;
 }
 
+.dark .recent-articles-page .section-lede {
+  color: var(--text-secondary);
+}
+
+.dark .recent-articles-list li {
+  border-bottom-color: var(--border-card);
+}
+
+.dark .recent-articles-list li a {
+  color: var(--text-primary);
+}
+
+.dark .recent-articles-list li a:hover {
+  color: var(--brand-link);
+}
+
+.dark .recent-articles-list li span {
+  color: var(--text-secondary);
+}
+
+.dark .recent-articles-page .recent-date-filter-info {
+  color: var(--brand-link);
+}
+
 @media (max-width: 768px) {
   .recent-articles-page .section-card {
     padding: 1.15rem 1.25rem;

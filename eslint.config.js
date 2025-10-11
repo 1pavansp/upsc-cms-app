@@ -1,29 +1,52 @@
-import js from '@eslint/js'
-import globals from 'globals'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
-import { defineConfig, globalIgnores } from 'eslint/config'
+import js from '@eslint/js';
+import globals from 'globals';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+import ts from '@typescript-eslint/eslint-plugin';
+import tsParser from '@typescript-eslint/parser';
 
-export default defineConfig([
-  globalIgnores(['dist']),
+export default [
+  {
+    ignores: ["dist/**"],
+  },
   {
     files: ['**/*.{js,jsx}'],
-    extends: [
-      js.configs.recommended,
-      reactHooks.configs['recommended-latest'],
-      reactRefresh.configs.vite,
-    ],
+    ignores: ["functions/**"],
+    plugins: {
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh
+    },
     languageOptions: {
-      ecmaVersion: 2020,
-      globals: globals.browser,
-      parserOptions: {
-        ecmaVersion: 'latest',
-        ecmaFeatures: { jsx: true },
-        sourceType: 'module',
+      globals: {
+        ...globals.browser
       },
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true
+        }
+      }
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
-    },
+      ...reactHooks.configs.recommended.rules,
+      'react-refresh/only-export-components': 'warn',
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }]
+    }
   },
-])
+  {
+    files: ["functions/src/**/*.ts"],
+    plugins: {
+      '@typescript-eslint': ts,
+    },
+    languageOptions: {
+      globals: {
+        ...globals.node
+      },
+      parser: tsParser,
+      parserOptions: {
+        project: true,
+        tsconfigRootDir: 's:/Cms/upsc-cms-app/functions'
+      }
+    },
+    rules: ts.configs.recommended.rules
+  }
+];
