@@ -1,0 +1,196 @@
+.primetime-section .primetime-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.primetime-section .primetime-header h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+.primetime-section .primetime-header p {
+  margin: 0.25rem 0 0;
+  color: #475569;
+}
+
+.primetime-section .primetime-carousel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #312e81 100%);
+  color: #e2e8f0;
+}
+
+.primetime-section .primetime-track {
+  display: flex;
+  transition: transform 0.6s ease-in-out;
+}
+
+.primetime-section .primetime-slide {
+  min-width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0;
+}
+
+.primetime-section .primetime-player-wrapper {
+  position: relative;
+  padding-bottom: 56.25%;
+  width: 100%;
+  background: #000;
+}
+
+.primetime-section .primetime-player-wrapper iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 1rem 0 0 1rem;
+}
+
+.primetime-section .primetime-slide-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 2rem;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(18px);
+}
+
+.primetime-section .primetime-slide-content h3 {
+  margin: 0.5rem 0 1rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.primetime-section .primetime-slide-content p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.primetime-section .primetime-presenter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.85rem;
+  background: rgba(59, 130, 246, 0.15);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #93c5fd;
+}
+
+.primetime-section .primetime-indicators {
+  position: absolute;
+  left: 50%;
+  bottom: 1.25rem;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.5rem;
+}
+
+.primetime-section .primetime-indicators button {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.primetime-section .primetime-indicators button.active {
+  width: 28px;
+  background: #38bdf8;
+}
+
+.primetime-section .primetime-placeholder,
+.primetime-section .primetime-error {
+  padding: 3rem;
+  border-radius: 1rem;
+  border: 1px dashed #94a3b8;
+  text-align: center;
+  color: #64748b;
+  background: rgba(148, 163, 184, 0.08);
+}
+
+@media (max-width: 1024px) {
+  .primetime-section .primetime-slide {
+    grid-template-columns: 1fr;
+  }
+
+  .primetime-section .primetime-player-wrapper iframe {
+    border-radius: 1rem 1rem 0 0;
+  }
+
+  .primetime-section .primetime-slide-content {
+    border-radius: 0 0 1rem 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .primetime-section .primetime-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .primetime-section .primetime-slide-content {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .primetime-section .primetime-carousel {
+    border-radius: 1rem;
+  }
+
+  .primetime-section .primetime-slide-content {
+    padding: 1.25rem;
+    gap: 0.75rem;
+  }
+
+  .primetime-section .primetime-slide-content h3 {
+    font-size: 1.25rem;
+  }
+
+  .primetime-section .primetime-slide-content p {
+    font-size: 0.92rem;
+  }
+
+  .primetime-section .primetime-presenter {
+    font-size: 0.8rem;
+  }
+
+  .primetime-section .primetime-player-wrapper {
+    padding-bottom: 58%;
+  }
+}
+
+@media (max-width: 420px) {
+  .primetime-section .primetime-slide-content {
+    padding: 1rem;
+  }
+
+  .primetime-section .primetime-slide-content h3 {
+    font-size: 1.15rem;
+  }
+
+  .primetime-section .primetime-slide-content p {
+    font-size: 0.88rem;
+  }
+
+  .primetime-section .primetime-indicators {
+    bottom: 0.9rem;
+  }
+}

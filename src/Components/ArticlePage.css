@@ -1,4 +1,24 @@
 /* General Article Page Layout */
+:root {
+  --home-card-bg: linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%);
+  --home-card-border: rgba(245, 158, 11, 0.1);
+  --home-card-hover-bg: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(16, 185, 129, 0.08) 100%);
+  --home-card-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  --home-card-hover-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  --home-plain-card-bg: #f8fafc;
+  --home-plain-card-border: #e2e8f0;
+}
+
+.dark {
+  --home-card-bg: linear-gradient(135deg, rgba(30, 64, 175, 0.35) 0%, rgba(16, 185, 129, 0.18) 100%);
+  --home-card-border: rgba(96, 165, 250, 0.35);
+  --home-card-hover-bg: linear-gradient(135deg, rgba(30, 64, 175, 0.45) 0%, rgba(16, 185, 129, 0.25) 100%);
+  --home-card-shadow: 0 10px 30px rgba(15, 23, 42, 0.55);
+  --home-card-hover-shadow: 0 16px 40px rgba(15, 23, 42, 0.75);
+  --home-plain-card-bg: rgba(17, 24, 39, 0.9);
+  --home-plain-card-border: rgba(148, 163, 184, 0.25);
+}
+
 .main-content {
   background: transparent;
   position: relative;
@@ -13,6 +33,9 @@
   position: relative;
 }
 
+
+
+
 .main-column {
   flex: 1;
   min-width: 0;
@@ -21,6 +44,61 @@
 .sidebar {
   width: 300px;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.article-error-overlay {
+  min-height: calc(100vh - 80px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1.5rem;
+  background: radial-gradient(circle at top, rgba(37, 99, 235, 0.12), transparent 55%);
+}
+
+.article-error-modal {
+  width: min(480px, 100%);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 24px 45px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(12px);
+}
+
+.article-error-modal h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.6rem;
+  color: #1e3a8a;
+}
+
+.article-error-modal p {
+  margin: 0 0 1.5rem;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.article-error-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.article-error-action:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 28px rgba(37, 99, 235, 0.3);
 }
 
 /* Article Header */
@@ -88,9 +166,14 @@
   color: white;
 }
 
+
 .subject-tag {
   background-color: #e0e7ff;
   color: #3730a3;
+}
+
+.interactive-tag {
+  cursor: pointer;
 }
 
 /* Article Content */
@@ -200,6 +283,72 @@
 .view-all-link:hover {
   color: #1e40af;
   text-decoration: underline;
+}
+
+.gs-links-section {
+  background: var(--home-plain-card-bg);
+  border: 1px solid var(--home-plain-card-border);
+  border-radius: 0.75rem;
+  margin-top: 2rem;
+  padding: 1.5rem;
+}
+
+.dark .gs-links-section {
+  background: rgba(17, 24, 39, 0.8);
+  border-color: var(--home-plain-card-border);
+}
+
+.gs-links-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.gs-link-card {
+  flex: 1 1 180px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 1.15rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--home-card-border);
+  text-decoration: none;
+  color: var(--text-primary);
+  font-weight: 600;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.gs-link-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--home-card-hover-shadow);
+}
+
+.gs-link-card.active {
+  border-color: #1e40af;
+}
+
+.gs-link-label {
+  font-size: 0.95rem;
+}
+
+.gs-link-action {
+  font-size: 0.85rem;
+  color: #2563eb;
+}
+
+.dark .gs-link-card {
+  background: rgba(17, 24, 39, 0.6);
+  border-color: var(--home-plain-card-border);
+}
+
+.dark .gs-link-action {
+  color: var(--home-progress-fill);
+}
+
+.gs-links-footer {
+  margin-top: 1.25rem;
 }
 
 .article-body {
@@ -409,14 +558,17 @@
 }
 
 /* Sidebar */
+.sidebar .sidebar-section:first-child {
+  margin-top: 0;
+}
 .sidebar-section {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.3);
-  padding: 2rem;
+  background: var(--home-card-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--home-card-border);
+  border-radius: 12px;
+  box-shadow: var(--home-card-shadow);
+  padding: 1.5rem;
   margin-bottom: 2rem;
   transition: all 0.3s ease;
   position: relative;
@@ -430,14 +582,14 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 20px 20px 0 0;
+  background: linear-gradient(135deg, #f59e0b 0%, #10b981 100%);
+  border-radius: 12px 12px 0 0;
 }
 
 .sidebar-section:hover {
   transform: translateY(-5px);
-  box-shadow: 0 16px 48px rgba(31, 38, 135, 0.4);
-  background: rgba(255, 255, 255, 0.15);
+  box-shadow: var(--home-card-hover-shadow);
+  background: var(--home-card-hover-bg);
 }
 
 .sidebar-section h3 {
@@ -461,7 +613,7 @@
 .event-list li {
   margin-bottom: 1rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--home-plain-card-border);
 }
 
 .event-list li:last-child {
@@ -470,14 +622,29 @@
 }
 
 .event-list strong {
-  color: #111827;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
 .event-list p {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin-top: 0.25rem;
+}
+
+.event-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: color 0.2s ease;
+}
+
+.event-link:hover strong {
+  color: #2563eb;
+}
+
+.event-link:hover p {
+  color: #2563eb;
 }
 
 /* Responsive Design */
@@ -501,11 +668,137 @@
   .article-navigation {
     grid-template-columns: 1fr;
   }
+  .gs-links-grid {
+    gap: 0.75rem;
+  }
+  .gs-link-card {
+    flex: 1 1 48%;
+  }
 }
 
 @media (max-width: 480px) {
   .page-layout {
     padding: 0.5rem 1rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .main-content {
+    padding-top: 72px;
+  }
+
+  .page-layout {
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 0 1rem 1.75rem;
+  }
+
+  .article-header {
+    padding: 1.35rem;
+    border-radius: 18px;
+  }
+
+  .article-title {
+    font-size: 1.8rem;
+    line-height: 1.3;
+  }
+
+  .article-date {
+    font-size: 0.95rem;
+  }
+
+  .article-main-image {
+    margin: 1rem 0;
+  }
+
+  .article-main-image img {
+    border-radius: 14px;
+  }
+
+  .article-body {
+    font-size: 0.98rem;
+    padding: 0 0.2rem;
+  }
+
+  .article-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.9rem;
+    padding: 1rem;
+    border-radius: 14px;
+  }
+
+  .share-buttons {
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.6rem;
+  }
+
+  .share-button,
+  .print-button {
+    flex: 1 1 48%;
+    justify-content: center;
+  }
+
+  .article-navigation {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .article-navigation .nav-link {
+    padding: 1rem;
+    border-radius: 14px;
+  }
+
+  .related-articles-section {
+    padding: 1.25rem;
+    border-radius: 16px;
+  }
+
+  .related-articles-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .related-article-card {
+    border-radius: 14px;
+  }
+
+  .related-article-content {
+    padding: 1rem;
+  }
+
+  .gs-links-grid {
+    flex-direction: column;
+  }
+
+  .gs-link-card {
+    flex: 1 1 auto;
+  }
+
+  .sidebar {
+    width: 100%;
+    order: 2;
+  }
+
+  .sidebar-section {
+    padding: 1.1rem;
+    margin-bottom: 1.25rem;
+    border-radius: 16px;
+  }
+
+  .calendar-wrapper .react-datepicker {
+    width: 100%;
+  }
+
+  .event-list li {
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .event-link {
+    padding: 0.25rem 0;
   }
 }
 

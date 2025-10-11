@@ -2,19 +2,24 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { collection, getDocs, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, where, Timestamp, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ArrowRight, Calendar as CalendarIcon } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { db } from '../firebase';
+import { formatDate, getDateRange } from '../utils/dateUtils';
 import Quiz from './Quiz';
 import CommentSystem from './CommentSystem';
-import { formatDate, getDateRange, isSameDay } from '../utils/dateUtils';
+import PrimetimeVideos from './PrimetimeVideos';
 import './Home.css';
+import { extractYoutubeVideoId, getYoutubeEmbedUrl } from '../utils/videoUtils';
+import { civicCentrePath } from '../constants/civicCentre';
 
+const GS_TAGS = ['GS1', 'GS2', 'GS3', 'GS4'];
 
 const Home = () => {
-  const { tagId } = useParams(); // Add this line
+  const { tagId } = useParams();
+  const normalizedTagId = tagId ? tagId.toUpperCase() : null;
   const [todaysQuiz, setTodaysQuiz] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
@@ -23,6 +28,177 @@ const Home = () => {
   const [latestUpdates, setLatestUpdates] = useState([]);
   const [dailyArticles, setDailyArticles] = useState([]);
   const [filteredArticles, setFilteredArticles] = useState([]);
+  const [quizResponses, setQuizResponses] = useState([]);
+  const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [quizScore, setQuizScore] = useState(0);
+  const [quizLeadForm, setQuizLeadForm] = useState({ name: '', mobile: '', otp: '' });
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [generatedOtp, setGeneratedOtp] = useState('');
+  const [leadStatus, setLeadStatus] = useState({ type: null, message: '' });
+  const [leadSubmitting, setLeadSubmitting] = useState(false);
+
+  const resetQuizLeadState = (questionCount = 0) => {
+    setQuizResponses(Array(questionCount).fill(null));
+    setQuizSubmitted(false);
+    setQuizScore(0);
+    setQuizLeadForm({ name: '', mobile: '', otp: '' });
+    setOtpSent(false);
+    setOtpVerified(false);
+    setGeneratedOtp('');
+    setLeadStatus({ type: null, message: '' });
+    setLeadSubmitting(false);
+  };
+
+  const handleLeadInputChange = (field) => (event) => {
+    const { value } = event.target;
+    const sanitizedValue =
+      field === 'mobile'
+        ? value.replace(/\D/g, '').slice(0, 10)
+        : field === 'otp'
+          ? value.replace(/\D/g, '').slice(0, 6)
+          : value;
+    setQuizLeadForm(prev => ({
+      ...prev,
+      [field]: sanitizedValue
+    }));
+  };
+
+  const isQuizAnswerCorrect = (question, optionIndex) => {
+    if (!question) return false;
+    const { answer, options = [] } = question;
+    if (typeof answer === 'number') {
+      return optionIndex === answer;
+    }
+    const selected = options[optionIndex];
+    return selected === answer;
+  };
+
+  const computeQuizScore = (quizData, responses) => {
+    if (!quizData || !Array.isArray(quizData.questions) || !Array.isArray(responses)) {
+      return 0;
+    }
+
+    return responses.reduce((total, response, index) => {
+      if (response === null || response === undefined) {
+        return total;
+      }
+      const question = quizData.questions[index];
+      if (!question) {
+        return total;
+      }
+      return isQuizAnswerCorrect(question, response) ? total + 1 : total;
+    }, 0);
+  };
+
+  const handleQuizSubmit = () => {
+    if (!todaysQuiz || !Array.isArray(todaysQuiz.questions) || todaysQuiz.questions.length === 0) {
+      setLeadStatus({ type: 'error', message: 'Quiz data is unavailable right now.' });
+      return;
+    }
+
+    if (quizResponses.some(response => response === null || response === undefined)) {
+      setLeadStatus({ type: 'error', message: 'Please answer all questions before submitting the quiz.' });
+      return;
+    }
+
+    const score = computeQuizScore(todaysQuiz, quizResponses);
+    const totalForMessage = todaysQuiz.questions?.length ?? quizResponses.length;
+    setQuizScore(score);
+    setQuizSubmitted(true);
+    setLeadStatus({
+      type: 'info',
+      message: `Great job! You scored ${score}/${totalForMessage}. Share your details to receive important updates.`
+    });
+  };
+
+  const handleSendOtp = () => {
+    if (!quizLeadForm.mobile || quizLeadForm.mobile.length !== 10) {
+      setLeadStatus({ type: 'error', message: 'Please enter a valid 10-digit mobile number before requesting an OTP.' });
+      return;
+    }
+
+    const generated = Math.floor(100000 + Math.random() * 900000).toString();
+    setGeneratedOtp(generated);
+    setOtpSent(true);
+    setOtpVerified(false);
+    setQuizLeadForm(prev => ({ ...prev, otp: '' }));
+    setLeadStatus({
+      type: 'info',
+      message: `A verification OTP has been generated for demo purposes: ${generated}. Enter it below to confirm your number.`
+    });
+  };
+
+  const handleVerifyOtp = () => {
+    if (!otpSent) {
+      setLeadStatus({ type: 'error', message: 'Please request an OTP before attempting verification.' });
+      return;
+    }
+
+    if (quizLeadForm.otp.trim() === generatedOtp) {
+      setOtpVerified(true);
+      setLeadStatus({ type: 'success', message: 'Mobile number verified successfully.' });
+    } else {
+      setOtpVerified(false);
+      setLeadStatus({ type: 'error', message: 'Incorrect OTP. Please try again.' });
+    }
+  };
+
+  const handleLeadSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!quizLeadForm.name.trim()) {
+      setLeadStatus({ type: 'error', message: 'Please enter your name.' });
+      return;
+    }
+
+    if (!quizLeadForm.mobile || quizLeadForm.mobile.length !== 10) {
+      setLeadStatus({ type: 'error', message: 'Please enter a valid 10-digit mobile number.' });
+      return;
+    }
+
+    if (!otpVerified) {
+      setLeadStatus({ type: 'error', message: 'Please verify the OTP before submitting your details.' });
+      return;
+    }
+
+    try {
+      setLeadSubmitting(true);
+      await addDoc(collection(db, 'quiz-leads'), {
+        name: quizLeadForm.name.trim(),
+        mobile: quizLeadForm.mobile,
+        quizId: todaysQuiz?.id ?? null,
+        quizTitle: todaysQuiz?.title ?? null,
+        score: quizScore,
+        totalQuestions: todaysQuiz?.questions?.length ?? quizResponses.length,
+        responses: quizResponses.map((response, index) => ({
+          questionNumber: index + 1,
+          selectedOptionIndex: response,
+          selectedOptionText:
+            response !== null && todaysQuiz?.questions?.[index]?.options
+              ? todaysQuiz.questions[index].options[response] ?? null
+              : null
+        })),
+        submittedAt: serverTimestamp()
+      });
+      setLeadStatus({
+        type: 'success',
+        message: 'Thank you! Your details have been saved. We will keep you posted with important updates.'
+      });
+    } catch (error) {
+      console.error('Error saving quiz lead:', error);
+      setLeadStatus({
+        type: 'error',
+        message: 'We were unable to save your details. Please try again in a little while.'
+      });
+    } finally {
+      setLeadSubmitting(false);
+    }
+  };
+
+  const [otherGsCollections, setOtherGsCollections] = useState([]);
+  const isGsTag = normalizedTagId ? GS_TAGS.includes(normalizedTagId) : false;
+  const activeTagId = isGsTag ? normalizedTagId : tagId;
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isDateFiltered, setIsDateFiltered] = useState(false);
@@ -38,12 +214,30 @@ const Home = () => {
       const endTimestamp = Timestamp.fromDate(endOfDay);
       
       // Fetch current affairs for the selected date
-      const affairsQuery = query(
+      let affairsQuery = query(
         collection(db, 'current-affairs'),
         where('date', '>=', startTimestamp),
         where('date', '<=', endTimestamp),
         orderBy('date', 'desc')
       );
+
+      if (isGsTag && activeTagId) {
+        affairsQuery = query(
+          collection(db, 'current-affairs'),
+          where('domains.gs', '==', activeTagId),
+          where('date', '>=', startTimestamp),
+          where('date', '<=', endTimestamp),
+          orderBy('date', 'desc')
+        );
+      } else if (activeTagId) {
+        affairsQuery = query(
+          collection(db, 'current-affairs'),
+          where('domains.subjects', 'array-contains', activeTagId),
+          where('date', '>=', startTimestamp),
+          where('date', '<=', endTimestamp),
+          orderBy('date', 'desc')
+        );
+      }
       
       const affairsSnapshot = await getDocs(affairsQuery);
       const dateFilteredArticles = affairsSnapshot.docs.map(doc => {
@@ -85,59 +279,73 @@ const Home = () => {
           limit(1)
         );
         const quizSnapshot = await getDocs(quizQuery);
-        console.log('Quiz snapshot:', quizSnapshot.empty ? 'empty' : 'has data');
         if (!quizSnapshot.empty) {
           const quizData = quizSnapshot.docs[0].data();
-          console.log('Quiz data:', JSON.stringify(quizData, null, 2));
           const formattedQuizData = {
             id: quizSnapshot.docs[0].id,
             ...quizData,
             date: quizData.date ? quizData.date : new Date(),
             questions: quizData.questions || []
           };
-          console.log('Formatted quiz data:', JSON.stringify(formattedQuizData, null, 2));
           setTodaysQuiz(formattedQuizData);
-          console.log('Set quiz data with questions:', formattedQuizData.questions.length);
+          const questionCount = formattedQuizData.questions?.length || 0;
+          resetQuizLeadState(questionCount);
+          setCurrentQuestion(0);
+          setSelectedOption(null);
+          setAnswerStatus(null);
+        }
+        if (quizSnapshot.empty) {
+          setTodaysQuiz(null);
+          resetQuizLeadState(0);
+          setCurrentQuestion(0);
+          setSelectedOption(null);
+          setAnswerStatus(null);
         }
 
         let currentAffairsBaseQuery = collection(db, 'current-affairs');
         let dailyArticlesBaseQuery = collection(db, 'current-affairs');
 
         // Apply tag filtering if tagId is present
-        if (tagId) {
-          if (['GS1', 'GS2', 'GS3', 'GS4'].includes(tagId)) {
-            currentAffairsBaseQuery = query(currentAffairsBaseQuery, where('domains.gs', '==', tagId));
-            dailyArticlesBaseQuery = query(dailyArticlesBaseQuery, where('domains.gs', '==', tagId));
+        if (activeTagId) {
+          if (isGsTag) {
+            currentAffairsBaseQuery = query(currentAffairsBaseQuery, where('domains.gs', '==', activeTagId));
+            dailyArticlesBaseQuery = query(dailyArticlesBaseQuery, where('domains.gs', '==', activeTagId));
           } else {
-            currentAffairsBaseQuery = query(currentAffairsBaseQuery, where('domains.subjects', 'array-contains', tagId));
-            dailyArticlesBaseQuery = query(dailyArticlesBaseQuery, where('domains.subjects', 'array-contains', tagId));
+            currentAffairsBaseQuery = query(currentAffairsBaseQuery, where('domains.subjects', 'array-contains', activeTagId));
+            dailyArticlesBaseQuery = query(dailyArticlesBaseQuery, where('domains.subjects', 'array-contains', activeTagId));
           }
         }
 
         // Fetch Current Affairs
         const affairsQuery = query(currentAffairsBaseQuery, orderBy('date', 'desc'), limit(7));
         const affairsSnapshot = await getDocs(affairsQuery);
-        setCurrentAffairs(affairsSnapshot.docs.map(doc => {
+        const normalizeArticle = (doc) => {
           const data = doc.data();
+          const title = typeof data.title === 'string' ? data.title.trim() : '';
+
           return {
             id: doc.id,
             ...data,
+            title,
             date: data.date ? data.date : new Date()
           };
-        }));
+        };
+
+        const isValidTitle = (title) => title && !/\.js(\?|$)/i.test(title) && !/^https?:\/\//i.test(title);
+
+        const currentAffairsArticles = affairsSnapshot.docs
+          .map(normalizeArticle)
+          .filter(article => isValidTitle(article.title));
+
+        setCurrentAffairs(currentAffairsArticles);
 
         // Fetch Daily Articles from Current Affairs
         const articlesQuery = query(dailyArticlesBaseQuery, orderBy('date', 'desc'), limit(7));
         const articlesSnapshot = await getDocs(articlesQuery);
-        setDailyArticles(articlesSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            title: data.title,
-            content: data.content,
-            date: data.date ? data.date : new Date()
-          };
-        }));
+        const dailyArticleList = articlesSnapshot.docs
+          .map(normalizeArticle)
+          .filter(article => isValidTitle(article.title));
+        setDailyArticles(dailyArticleList);
 
         // Fetch Latest Updates
         const updatesQuery = query(
@@ -146,7 +354,7 @@ const Home = () => {
           limit(5)
         );
         const updatesSnapshot = await getDocs(updatesQuery);
-        setLatestUpdates(updatesSnapshot.docs.map(doc => {
+        const updates = updatesSnapshot.docs.map(doc => {
           const data = doc.data();
           return {
             id: doc.id,
@@ -156,38 +364,85 @@ const Home = () => {
             category: data.category || 'General',
             isImportant: data.isImportant || false
           };
-        }));
+        });
+        setLatestUpdates(updates);
+
+        if (isGsTag) {
+          const otherTags = GS_TAGS.filter(tag => tag !== activeTagId);
+          const otherTagResults = await Promise.all(otherTags.map(async (tag) => {
+            const tagQuery = query(
+              collection(db, 'current-affairs'),
+              where('domains.gs', '==', tag),
+              orderBy('date', 'desc'),
+              limit(3)
+            );
+            const tagSnapshot = await getDocs(tagQuery);
+            return {
+              tag,
+              articles: tagSnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                  id: doc.id,
+                  title: data.title,
+                  content: data.content,
+                  date: data.date ? data.date : new Date(),
+                  summary: data.summary || data.content?.substring(0, 160)
+                };
+              })
+            };
+          }));
+          setOtherGsCollections(otherTagResults);
+        } else {
+          setOtherGsCollections([]);
+        }
 
       } catch (err) {
         console.error("Error fetching content:", err);
         // Keep the default state values on error
+        setOtherGsCollections([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchContent();
-  }, [tagId]); // Add tagId to dependencies
+  }, [activeTagId, isGsTag]);
+
+  const heroHeadline = isGsTag
+    ? `${activeTagId} Articles & Insights`
+    : 'Shape Your Destiny, Serve the Nation';
+  const heroSubtext = isGsTag
+    ? `Curated analysis, quizzes, and resources mapped to ${activeTagId} so you can revise every theme with confidence.`
+    : 'Join CivicCentre IAS, where aspirants transform into leaders. Your journey to becoming an IAS officer starts here.';
+
+  const heroCtaHref = civicCentrePath('/courses');
+
+  const defaultSectionTitle = isGsTag ? `${activeTagId} Highlights` : 'Latest Updates';
 
   return (
     <main className="main-content">
       {/* Hero Section */}
-      <section className="hero-section">
-        <h1>Shape Your Destiny, Serve the Nation</h1>
-        <p>Join CivicCentre IAS, where aspirants transform into leaders. Your journey to becoming an IAS officer starts here.</p>
-        <button className="hero-button">
-          Start Learning <ArrowRight />
-        </button>
+      <section className={`hero-section ${isGsTag ? 'gs-hero' : ''}`}>
+        <h1>{heroHeadline}</h1>
+        <p>{heroSubtext}</p>
+        <a
+          className="hero-button"
+          href={heroCtaHref}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {isGsTag ? `Explore ${activeTagId} Resources` : 'Start Learning'} <ArrowRight />
+        </a>
       </section>
 
       <div className="page-layout">
         <div className="main-column">
           <div className="main-content-wrapper">
             {/* Latest Updates Section - Moved to top */}
-            <section className="content-section">
+            <section className="content-section" id={isGsTag ? 'gs-article-feed' : 'latest-updates'}>
               <div className="section-card">
                 <h2>
-                  {isDateFiltered ? `Articles from ${formatDate(selectedDate)}` : 'Latest Updates'}
+                  {isDateFiltered ? `Articles from ${formatDate(selectedDate)}` : defaultSectionTitle}
                   {isDateFiltered && (
                     <button 
                       onClick={() => {
@@ -225,40 +480,68 @@ const Home = () => {
                               </Link>
                             </h3>
                             <div className="update-meta">
-                              {article.domains?.gs && <span className="category">{article.domains.gs}</span>}
+                              {article.domains?.gs && (
+                                <Link to={`/gs/${article.domains.gs}`} className="tag-link">
+                                  {article.domains.gs}
+                                </Link>
+                              )}
                               <span className="date">{formatDate(article.date)}</span>
                             </div>
-                            <p className="summary">{article.content?.substring(0, 150)}...</p>
+                            <p className="summary">
+                              {article.content ? `${article.content.substring(0, 150)}...` : 'Summary not available.'}
+                            </p>
                           </div>
                         ))
                       ) : (
                         <p>No articles found for {formatDate(selectedDate)}</p>
                       )
                     ) : (
-                      [
-                          { id: 1, title: "UPSC CSE 2026-27 PCM Mentorship classes", content: "Mentorship classes for UPSC CSE 2026-27 PCM.", category: "UPSC", date: new Date() },
-                          { id: 2, title: "UPSC CSE Mains 2025 GS FLMT", content: "Full Length Mock Tests for UPSC CSE Mains 2025 GS.", category: "UPSC", date: new Date() },
-                          { id: 3, title: "Mains Sectional Tests Series 2025 Batch-2", content: "Batch-2 of Mains Sectional Tests Series for 2025.", category: "UPSC", date: new Date() },
-                          { id: 4, title: "Mains 2026 Naipunyata+ A Long Term Program", content: "A long term program for Mains 2026.", category: "UPSC", date: new Date() },
-                          { id: 5, title: "Mains 2025-26 NAIPUNYATA+", content: "NAIPUNYATA+ for Mains 2025-26.", category: "UPSC", date: new Date() },
-                        ].map((update) => (
-                        <div key={update.id} className="content-item">
-                          <h3>
-                            {update.isImportant && <span className="important-badge">Important</span>}
-                            {update.title}
-                          </h3>
-                          <div className="update-meta">
-                            <span className="category">{update.category}</span>
-                            <span className="date">{formatDate(update.date)}</span>
+                      (latestUpdates.length > 0 ? latestUpdates : [
+                        { id: 'placeholder-1', title: "UPSC CSE 2026-27 PCM Mentorship classes", content: "Mentorship classes for UPSC CSE 2026-27 PCM.", category: "UPSC", date: new Date(), source: 'CivicCentre IAS', link: '/updates' },
+                        { id: 'placeholder-2', title: "UPSC CSE Mains 2025 GS FLMT", content: "Full Length Mock Tests for UPSC CSE Mains 2025 GS.", category: "UPSC", date: new Date(), source: 'CivicCentre IAS', link: '/updates' },
+                        { id: 'placeholder-3', title: "Mains Sectional Tests Series 2025 Batch-2", content: "Batch-2 of Mains Sectional Tests Series for 2025.", category: "UPSC", date: new Date(), source: 'CivicCentre IAS', link: '/updates' },
+                        { id: 'placeholder-4', title: "Mains 2026 Naipunyata+ A Long Term Program", content: "A long term program for Mains 2026.", category: "UPSC", date: new Date(), source: 'CivicCentre IAS', link: '/updates' },
+                        { id: 'placeholder-5', title: "Mains 2025-26 NAIPUNYATA+", content: "NAIPUNYATA+ for Mains 2025-26.", category: "UPSC", date: new Date(), source: 'CivicCentre IAS', link: '/updates' },
+                      ]).map((update) => {
+                        const updateSource = update.source || 'CivicCentre IAS';
+                        const updateLink = civicCentrePath(update.link || '/updates');
+                        const updateSnippet = update.content ? `${update.content.substring(0, 150)}...` : 'Details coming soon.';
+                        const updateCategory = update.category || 'General';
+                        const normalizedCategory = updateCategory.toUpperCase();
+                        const categoryIsGs = GS_TAGS.includes(normalizedCategory);
+                        return (
+                          <div key={update.id} className="content-item">
+                            <h3>
+                              {update.isImportant && <span className="important-badge">Important</span>}
+                              <a href={updateLink} className="content-link" target="_blank" rel="noopener noreferrer">
+                                {update.title}
+                              </a>
+                            </h3>
+                            <div className="update-meta">
+                              {categoryIsGs ? (
+                                <Link to={`/gs/${normalizedCategory}`} className="tag-link">
+                                  {normalizedCategory}
+                                </Link>
+                              ) : (
+                                <span className="category">{updateCategory}</span>
+                              )}
+                              <span className="source">From {updateSource}</span>
+                              <span className="date">{formatDate(update.date)}</span>
+                            </div>
+                            <p className="summary">{updateSnippet}</p>
                           </div>
-                          <p className="summary">{update.content}</p>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                     {!isDateFiltered && (
-                      <Link to="/updates" className="card-button">
+                      <a
+                        href={civicCentrePath('/updates')}
+                        className="card-button"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         View All Updates <ArrowRight />
-                      </Link>
+                      </a>
                     )}
                   </div>
                 )}
@@ -285,7 +568,88 @@ const Home = () => {
                         setSelectedOption={setSelectedOption}
                         answerStatus={answerStatus}
                         setAnswerStatus={setAnswerStatus}
+                        userResponses={quizResponses}
+                        setUserResponses={setQuizResponses}
+                        onQuizSubmit={handleQuizSubmit}
+                        quizSubmitted={quizSubmitted}
                       />
+                      {leadStatus.message && (
+                        <p className={`quiz-lead-status ${leadStatus.type || ''}`}>
+                          {leadStatus.message}
+                        </p>
+                      )}
+                      {quizSubmitted && (
+                        <div className="quiz-lead-wrapper">
+                          <h4>Stay Updated with CivicCentre IAS</h4>
+                          <p className="quiz-lead-score">
+                            You scored <strong>{quizScore}</strong> out of <strong>{todaysQuiz.questions?.length ?? quizResponses.length}</strong>.
+                            Share your details to receive regular updates and next steps.
+                          </p>
+                          <form className="quiz-lead-form" onSubmit={handleLeadSubmit}>
+                            <div className="quiz-lead-field">
+                              <label htmlFor="quiz-lead-name">Full Name</label>
+                              <input
+                                id="quiz-lead-name"
+                                type="text"
+                                value={quizLeadForm.name}
+                                onChange={handleLeadInputChange('name')}
+                                placeholder="Enter your name"
+                                required
+                              />
+                            </div>
+                            <div className="quiz-lead-field">
+                              <label htmlFor="quiz-lead-mobile">Mobile Number</label>
+                              <input
+                                id="quiz-lead-mobile"
+                                type="tel"
+                                value={quizLeadForm.mobile}
+                                onChange={handleLeadInputChange('mobile')}
+                                placeholder="10-digit mobile number"
+                                required
+                              />
+                            </div>
+                            <div className="quiz-lead-actions">
+                              <button
+                                type="button"
+                                className="quiz-lead-button secondary"
+                                onClick={handleSendOtp}
+                                disabled={leadSubmitting}
+                              >
+                                {otpSent ? 'Resend OTP' : 'Send OTP'}
+                              </button>
+                              <button
+                                type="button"
+                                className="quiz-lead-button secondary"
+                                onClick={handleVerifyOtp}
+                                disabled={!otpSent || leadSubmitting}
+                              >
+                                Verify OTP
+                              </button>
+                            </div>
+                            <div className="quiz-lead-field otp-field">
+                              <label htmlFor="quiz-lead-otp">Enter OTP</label>
+                              <input
+                                id="quiz-lead-otp"
+                                type="text"
+                                value={quizLeadForm.otp}
+                                onChange={handleLeadInputChange('otp')}
+                                placeholder="Enter the OTP"
+                                disabled={!otpSent}
+                                required
+                              />
+                            </div>
+                            <div className="quiz-lead-submit">
+                              <button
+                                type="submit"
+                                className="quiz-lead-button primary"
+                                disabled={!otpVerified || leadSubmitting}
+                              >
+                                {leadSubmitting ? 'Saving...' : 'Submit Details'}
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <p>No quiz available for today</p>
@@ -311,51 +675,49 @@ const Home = () => {
                           <p className="date">{formatDate(article.date)}</p>
                         </div>
                       ))}
-                      <button className="card-button">
+                      <Link to="/recent-articles" className="card-button">
                         View All <ArrowRight />
-                      </button>
+                      </Link>
                     </div>
                   )}
                 </div>
               </section>
+
+              {isGsTag && otherGsCollections.length > 0 && (
+                <section className="content-section">
+                  <div className="section-card">
+                    <h2>Explore Other GS Papers</h2>
+                    <div className="other-gs-grid">
+                      {otherGsCollections.map(({ tag, articles }) => (
+                        <div key={tag} className="other-gs-card">
+                          <div className="other-gs-card-header">
+                            <span className="other-gs-pill">{tag}</span>
+                            <p>Top picks from {tag} to balance your preparation.</p>
+                          </div>
+                          {articles.length > 0 ? (
+                            <ul className="other-gs-list">
+                              {articles.map((article) => (
+                                <li key={article.id}>
+                                  <Link to={`/current-affairs/${article.id}`}>{article.title}</Link>
+                                  <span>{formatDate(article.date)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="empty-note">New articles coming soon.</p>
+                          )}
+                          <Link to={`/gs/${tag}`} className="other-gs-link">
+                            View {tag} Articles <ArrowRight />
+                          </Link>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              )}
             </div>
 
-            {/* Prime Time Videos Section */}
-            <section className="prime-time-videos">
-              <h2>Prime Time Videos from CivicCentre IAS</h2>
-              <div className="videos-scroller">
-                <div className="video-card">
-                  <iframe src="https://www.youtube.com/embed/LaVeA1NBwh8" title="INTERNATIONAL RELATIONS | CURRENT AFFAIRS | CIVICCENTRE IAS" allowFullScreen></iframe>
-                  <div className="video-card-content">
-                    <h3>INTERNATIONAL RELATIONS | CURRENT AFFAIRS</h3>
-                  </div>
-                </div>
-                <div className="video-card">
-                  <iframe src="https://www.youtube.com/embed/F22d_p5tq2A" title="Polity Current Affairs | Weekly Current Affairs | CIVICCENTRE IAS" allowFullScreen></iframe>
-                  <div className="video-card-content">
-                    <h3>Polity Current Affairs | Weekly Current Affairs</h3>
-                  </div>
-                </div>
-                <div className="video-card">
-                  <iframe src="https://www.youtube.com/embed/ZJb6gZgC_A" title="S&T CURRENT AFFAIRS | WEEKLY CURRENT AFFAIRS | CIVICCENTRE IAS" allowFullScreen></iframe>
-                  <div className="video-card-content">
-                    <h3>S&T CURRENT AFFAIRS | WEEKLY CURRENT AFFAIRS</h3>
-                  </div>
-                </div>
-                <div className="video-card">
-                  <iframe src="https://www.youtube.com/embed/Y6P2n2_yD3c" title="Social Issues | Weekly Current Affairs | CIVICCENTRE IAS" allowFullScreen></iframe>
-                  <div className="video-card-content">
-                    <h3>Social Issues | Weekly Current Affairs</h3>
-                  </div>
-                </div>
-                <div className="video-card">
-                  <iframe src="https://www.youtube.com/embed/w-m4p3LgXyY" title="History & Art and Culture | Weekly Current Affairs | CIVICCENTRE IAS" allowFullScreen></iframe>
-                  <div className="video-card-content">
-                    <h3>History & Art and Culture | Weekly Current Affairs</h3>
-                  </div>
-                </div>
-              </div>
-            </section>
+            <PrimetimeVideos />
 
             {/* Previous Year Papers Section */}
             <section className="content-management-section">
@@ -364,17 +726,38 @@ const Home = () => {
                 <div className="paper-card">
                   <h3>2023 Prelims Paper</h3>
                   <p>Download and analyze the latest prelims paper.</p>
-                  <button className="download-button">Download PDF</button>
+                  <a
+                    className="download-button"
+                    href={civicCentrePath('/previous-year-papers')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Download PDF
+                  </a>
                 </div>
                 <div className="paper-card">
                   <h3>2022 Mains GS Paper I</h3>
                   <p>Review the Mains General Studies Paper I from 2022.</p>
-                  <button className="download-button">Download PDF</button>
+                  <a
+                    className="download-button"
+                    href={civicCentrePath('/previous-year-papers')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Download PDF
+                  </a>
                 </div>
                  <div className="paper-card">
                   <h3>2021 Essay Paper</h3>
                   <p>Practice writing with the essay topics from 2021.</p>
-                  <button className="download-button">Download PDF</button>
+                  <a
+                    className="download-button"
+                    href={civicCentrePath('/previous-year-papers')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Download PDF
+                  </a>
                 </div>
               </div>
             </section>
@@ -386,23 +769,44 @@ const Home = () => {
                 <div className="magazine-card">
                   <h3>CivicCentre IAS Magazine - September 2025</h3>
                   <p>Comprehensive analysis of current affairs and exam-oriented articles.</p>
-                  <button className="download-button">Read Now</button>
+                  <a
+                    className="download-button"
+                    href={civicCentrePath('/magazines')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Read Now
+                  </a>
                 </div>
                 <div className="magazine-card">
                   <h3>CivicCentre IAS Magazine - August 2025</h3>
                   <p>In-depth coverage of national and international events.</p>
-                  <button className="download-button">Read Now</button>
+                  <a
+                    className="download-button"
+                    href={civicCentrePath('/magazines')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Read Now
+                  </a>
                 </div>
                 <div className="magazine-card">
                   <h3>UPSC Success Stories - Vol. 3</h3>
                   <p>Inspiring journeys of successful IAS candidates.</p>
-                  <button className="download-button">Get Your Copy</button>
+                  <a
+                    className="download-button"
+                    href={civicCentrePath('/magazines')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Get Your Copy
+                  </a>
                 </div>
               </div>
             </section>
 
             {/* Comment Section */}
-            <section className="comment-section">
+            <section className="content-section comment-section-wrapper">
               <CommentSystem />
             </section>
 
@@ -419,7 +823,14 @@ const Home = () => {
                     <li>Daily Current Affairs</li>
                     <li>Basic Study Notes</li>
                   </ul>
-                  <button className="subscribe-button">Choose Basic</button>
+                  <a
+                    className="subscribe-button"
+                    href={civicCentrePath('/subscriptions#basic')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Choose Basic
+                  </a>
                 </div>
                 <div className="subscription-card featured-plan">
                   <h3>Premium Plan</h3>
@@ -430,7 +841,14 @@ const Home = () => {
                     <li>Full Mock Test Series</li>
                     <li>Personalized Mentorship</li>
                   </ul>
-                  <button className="subscribe-button">Choose Premium</button>
+                  <a
+                    className="subscribe-button"
+                    href={civicCentrePath('/subscriptions#premium')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Choose Premium
+                  </a>
                 </div>
                 <div className="subscription-card">
                   <h3>Annual Plan</h3>
@@ -440,7 +858,14 @@ const Home = () => {
                     <li>2 Months Free!</li>
                     <li>Exclusive Webinars</li>
                   </ul>
-                  <button className="subscribe-button">Choose Annual</button>
+                  <a
+                    className="subscribe-button"
+                    href={civicCentrePath('/subscriptions#annual')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Choose Annual
+                  </a>
                 </div>
               </div>
             </section>
@@ -463,6 +888,7 @@ const Home = () => {
                 calendarClassName="sidebar-calendar"
                 showPopperArrow={false}
                 fixedHeight
+                isClearable
               />
             </div>
           </div>
@@ -473,11 +899,16 @@ const Home = () => {
             <ul className="updates-list">
               {currentAffairs.map(article => (
                 <li key={article.id}>
-                  <Link to={`/current-affairs/${article.id}`}>{article.title}</Link>
+                  <Link to={`/current-affairs/${article.id}`} className="sidebar-article-link">
+                    {article.title}
+                  </Link>
                   <small>Posted {formatDate(article.date)}</small>
                 </li>
               ))}
             </ul>
+            <Link to="/recent-articles" className="sidebar-cta-link">
+              View All Articles
+            </Link>
           </div>
         </aside>
       </div>

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, IconButton } from '@mui/material';
+import { Paper, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, IconButton, Grid, Card, CardMedia, CardContent, CardActions, Typography } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 
@@ -66,31 +66,34 @@ const ManageUpdates = ({ setEditingUpdate }) => {
 
     return (
         <Paper sx={{ p: 2 }}>
-            <TableContainer>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Title</TableCell>
-                            <TableCell>Category</TableCell>
-                            <TableCell>Date</TableCell>
-                            <TableCell>Actions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {updates.map((update) => (
-                            <TableRow key={update.id}>
-                                <TableCell>{update.title}</TableCell>
-                                <TableCell>{update.category}</TableCell>
-                                <TableCell>{formatDate(update.date)}</TableCell>
-                                <TableCell>
-                                    <IconButton onClick={() => setEditingUpdate(update)}><EditIcon /></IconButton>
-                                    <IconButton onClick={() => handleClickOpen(update)}><DeleteIcon /></IconButton>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            <Grid container spacing={2}>
+                {updates.map((update) => (
+                    <Grid item xs={12} sm={6} key={update.id}>
+                        <Card>
+                            {update.imageUrl && (
+                                <CardMedia
+                                    component="img"
+                                    height="140"
+                                    image={update.imageUrl}
+                                    alt={update.title}
+                                />
+                            )}
+                            <CardContent>
+                                <Typography gutterBottom variant="h5" component="div">
+                                    {update.title}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    {update.category} - {formatDate(update.date)}
+                                </Typography>
+                            </CardContent>
+                            <CardActions>
+                                <IconButton onClick={() => setEditingUpdate(update)}><EditIcon /></IconButton>
+                                <IconButton onClick={() => handleClickOpen(update)}><DeleteIcon /></IconButton>
+                            </CardActions>
+                        </Card>
+                    </Grid>
+                ))}
+            </Grid>
             <Dialog open={open} onClose={handleClose}>
                 <DialogTitle>Delete Update</DialogTitle>
                 <DialogContent>
