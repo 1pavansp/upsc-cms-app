@@ -23,6 +23,8 @@ import ManageQuizzes from './ManageQuizzes';
 import ManageCurrentAffairs from './ManageCurrentAffairs';
 import PrimetimeVideoForm from './PrimetimeVideoForm';
 import ManagePrimetimeVideos from './ManagePrimetimeVideos';
+import HeroSlidesManager from './HeroSlidesManager';
+import StateHighlightsManager from './StateHighlightsManager';
 
 // Constants
 const DRAWER_WIDTH = 280; // Sidebar width
@@ -153,6 +155,10 @@ const AdminDashboard = () => {
         return <ManageCurrentAffairs setEditingArticle={setEditingArticle} />;
       case 'manage-primetime-videos':
         return <ManagePrimetimeVideos setEditingVideo={setEditingVideo} />;
+      case 'manage-hero-slides':
+        return <HeroSlidesManager />;
+      case 'manage-state-highlights':
+        return <StateHighlightsManager />;
       default:
         return <Typography>Select a category</Typography>;
     }

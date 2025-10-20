@@ -21,6 +21,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
+import ImageIcon from '@mui/icons-material/Image';
+import PublicIcon from '@mui/icons-material/Public';
 
 const defaultDrawerWidth = 260;
 
@@ -65,7 +67,9 @@ const Sidebar = ({
       { text: 'Current Affairs', icon: <ListAltIcon />, tab: 'manage-current-affairs' },
       { text: 'Quizzes', icon: <ManageSearchIcon />, tab: 'manage-quizzes' },
       { text: 'Primetime Videos', icon: <VideoLibraryIcon />, tab: 'manage-primetime-videos' },
-      { text: 'Updates', icon: <EditIcon />, tab: 'manage-updates' }
+      { text: 'Updates', icon: <EditIcon />, tab: 'manage-updates' },
+      { text: 'Hero Banner', icon: <ImageIcon />, tab: 'manage-hero-slides' },
+      { text: 'State Highlights', icon: <PublicIcon />, tab: 'manage-state-highlights' }
     ],
     []
   );

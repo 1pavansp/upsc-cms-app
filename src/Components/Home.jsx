@@ -1,6 +1,6 @@
 // src/components/Home.jsx
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { collection, getDocs, query, orderBy, limit, where, Timestamp, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ArrowRight, Calendar as CalendarIcon } from 'lucide-react';
@@ -8,16 +8,67 @@ import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { db } from '../firebase';
 import { formatDate, getDateRange } from '../utils/dateUtils';
+import { ensureArticleHasSlug } from '../utils/articleUtils';
 import Quiz from './Quiz';
 import CommentSystem from './CommentSystem';
 import PrimetimeVideos from './PrimetimeVideos';
 import './Home.css';
-import { extractYoutubeVideoId, getYoutubeEmbedUrl } from '../utils/videoUtils';
 import { civicCentrePath } from '../constants/civicCentre';
 
 const normalizeText = (value = '') => value?.toString().trim().toLowerCase();
 
 const GS_TAGS = ['GS1', 'GS2', 'GS3', 'GS4'];
+
+const FALLBACK_STATE_HIGHLIGHTS = [
+  {
+    id: 'telangana',
+    label: 'Telangana',
+    path: '/state/telangana',
+    image:
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Charminar_south_east.jpg/640px-Charminar_south_east.jpg',
+    imageAlt: 'Charminar monument at dusk in Hyderabad, Telangana',
+    highlight: 'Charminar, Hyderabad'
+  },
+  {
+    id: 'andhra-pradesh',
+    label: 'Andhra Pradesh',
+    path: '/state/andhra-pradesh',
+    image:
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Amaravati_Stupa%2C_Amaravati%2C_India_%2807%29.jpg/640px-Amaravati_Stupa%2C_Amaravati%2C_India_%2807%29.jpg',
+    imageAlt: 'Ancient Amaravati Stupa in Andhra Pradesh',
+    highlight: 'Amaravati Stupa'
+  }
+];
+
+const FALLBACK_LATEST_UPDATES = [
+  {
+    id: 'placeholder-1',
+    title: 'UPSC CSE 2026-27 PCM Mentorship classes',
+    content: 'Mentorship classes for UPSC CSE 2026-27 PCM.',
+    category: 'UPSC',
+    date: new Date(),
+    source: 'CivicCentre IAS',
+    link: '/updates'
+  },
+  {
+    id: 'placeholder-2',
+    title: 'UPSC CSE Mains 2025 GS FLMT',
+    content: 'Full Length Mock Tests for UPSC CSE Mains 2025 GS.',
+    category: 'UPSC',
+    date: new Date(),
+    source: 'CivicCentre IAS',
+    link: '/updates'
+  },
+  {
+    id: 'placeholder-3',
+    title: 'Mains Sectional Tests Series 2025 Batch-2',
+    content: 'Batch-2 of Mains Sectional Tests Series for 2025.',
+    category: 'UPSC',
+    date: new Date(),
+    source: 'CivicCentre IAS',
+    link: '/updates'
+  }
+];
 
 const Home = () => {
   const { tagId } = useParams();
@@ -39,8 +90,93 @@ const Home = () => {
   const [generatedOtp, setGeneratedOtp] = useState('');
   const [leadStatus, setLeadStatus] = useState({ type: null, message: '' });
   const [leadSubmitting, setLeadSubmitting] = useState(false);
+  const [stateHighlights, setStateHighlights] =
+    useState(FALLBACK_STATE_HIGHLIGHTS);
   const [quizLoading, setQuizLoading] = useState(true);
   const [showLeadModal, setShowLeadModal] = useState(false);
+
+  const previousYearPapers = [
+    {
+      id: 'py-2023-prelims',
+      title: '2023 Prelims Paper',
+      description: 'Download and analyze the latest prelims paper.',
+      link: civicCentrePath('/previous-year-papers'),
+      cta: 'Download'
+    },
+    {
+      id: 'py-2022-mains-gs1',
+      title: '2022 Mains GS Paper I',
+      description: 'Review the Mains General Studies Paper I from 2022.',
+      link: civicCentrePath('/previous-year-papers'),
+      cta: 'Download'
+    },
+    {
+      id: 'py-2021-essay',
+      title: '2021 Essay Paper',
+      description: 'Practice writing with the essay topics from 2021.',
+      link: civicCentrePath('/previous-year-papers'),
+      cta: 'Download'
+    }
+  ];
+
+  const civicCentrePublications = [
+    {
+      id: 'pub-2025-sept',
+      title: 'Magazine - September 2025',
+      description: 'Comprehensive analysis of current affairs and exam-oriented articles.',
+      link: civicCentrePath('/magazines'),
+      cta: 'Read Now'
+    },
+    {
+      id: 'pub-2025-aug',
+      title: 'Magazine - August 2025',
+      description: 'In-depth coverage of national and international events.',
+      link: civicCentrePath('/magazines'),
+      cta: 'Read Now'
+    },
+    {
+      id: 'pub-success-stories',
+      title: 'UPSC Success Stories - Vol. 3',
+      description: 'Inspiring journeys of successful IAS candidates.',
+      link: civicCentrePath('/magazines'),
+      cta: 'View'
+    }
+  ];
+
+  useEffect(() => {
+    const fetchStateHighlightContent = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, 'state-highlights'));
+        if (!snapshot.empty) {
+          const docMap = snapshot.docs.reduce((acc, docSnap) => {
+            acc[docSnap.id] = docSnap.data();
+            return acc;
+          }, {});
+          const mergedHighlights = FALLBACK_STATE_HIGHLIGHTS.map((fallback) => {
+            const docData = docMap[fallback.id];
+            if (!docData) {
+              return fallback;
+            }
+            return {
+              ...fallback,
+              label: docData.label || fallback.label,
+              highlight: docData.highlight || fallback.highlight,
+              path: docData.path || fallback.path,
+              image: docData.imageUrl || fallback.image,
+              imageAlt: docData.label
+                ? `${docData.label} highlight`
+                : fallback.imageAlt
+            };
+          });
+          setStateHighlights(mergedHighlights);
+        }
+      } catch (err) {
+        console.error('Error loading state highlights:', err);
+      }
+    };
+
+    fetchStateHighlightContent();
+  }, []);
 
   const resetQuizLeadState = (questionCount = 0) => {
     setQuizResponses(Array(questionCount).fill(null));
@@ -386,14 +522,9 @@ const Home = () => {
       }
       
       const affairsSnapshot = await getDocs(affairsQuery);
-      const dateFilteredArticles = affairsSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          date: data.date ? data.date : new Date()
-        };
-      });
+      const dateFilteredArticles = await Promise.all(
+        affairsSnapshot.docs.map((docSnap) => ensureArticleHasSlug(docSnap))
+      );
       
       setFilteredArticles(dateFilteredArticles);
       isDateFilteredRef.current = true;
@@ -414,17 +545,16 @@ const Home = () => {
     fetchQuizForDate(today);
   };
 
-  // Function to handle date selection
   const handleDateChange = (date) => {
     if (!date) {
       clearDateFilter();
-    return;
-  }
+      return;
+    }
 
-  selectedDateRef.current = date;
+    selectedDateRef.current = date;
+    isDateFilteredRef.current = true;
     setSelectedDate(date);
     setIsDateFiltered(true);
-    isDateFilteredRef.current = true;
     fetchArticlesByDate(date);
     fetchQuizForDate(date);
   };
@@ -452,22 +582,23 @@ const Home = () => {
         // Fetch Current Affairs
         const affairsQuery = query(currentAffairsBaseQuery, orderBy('date', 'desc'), limit(7));
         const affairsSnapshot = await getDocs(affairsQuery);
-        const normalizeArticle = (doc) => {
-          const data = doc.data();
-          const title = typeof data.title === 'string' ? data.title.trim() : '';
+        const normalizeArticle = async (docSnap) => {
+          const article = await ensureArticleHasSlug(docSnap);
+          const title = typeof article.title === 'string' ? article.title.trim() : '';
 
           return {
-            id: doc.id,
-            ...data,
+            ...article,
             title,
-            date: data.date ? data.date : new Date()
+            date: article.date || new Date()
           };
         };
 
         const isValidTitle = (title) => title && !/\.js(\?|$)/i.test(title) && !/^https?:\/\//i.test(title);
 
-        const currentAffairsArticles = affairsSnapshot.docs
-          .map(normalizeArticle)
+        const currentAffairsArticlesRaw = await Promise.all(
+          affairsSnapshot.docs.map((docSnap) => normalizeArticle(docSnap))
+        );
+        const currentAffairsArticles = currentAffairsArticlesRaw
           .filter(article => isValidTitle(article.title));
 
         setCurrentAffairs(currentAffairsArticles);
@@ -475,16 +606,19 @@ const Home = () => {
         // Fetch Daily Articles from Current Affairs
         const articlesQuery = query(dailyArticlesBaseQuery, orderBy('date', 'desc'), limit(5));
         const articlesSnapshot = await getDocs(articlesQuery);
-        const dailyArticleList = articlesSnapshot.docs
-          .map(normalizeArticle)
-          .filter(article => isValidTitle(article.title)).slice(0, 5);
+        const dailyArticleListRaw = await Promise.all(
+          articlesSnapshot.docs.map((docSnap) => normalizeArticle(docSnap))
+        );
+        const dailyArticleList = dailyArticleListRaw
+          .filter(article => isValidTitle(article.title))
+          .slice(0, 5);
         setDailyArticles(dailyArticleList);
 
         // Fetch Latest Updates
         const updatesQuery = query(
           collection(db, 'latest-updates'),
           orderBy('date', 'desc'),
-          limit(5)
+          limit(3)
         );
         const updatesSnapshot = await getDocs(updatesQuery);
         const updates = updatesSnapshot.docs.map(doc => {
@@ -510,18 +644,15 @@ const Home = () => {
               limit(3)
             );
             const tagSnapshot = await getDocs(tagQuery);
+            const articlesWithSlug = await Promise.all(
+              tagSnapshot.docs.map((docSnap) => normalizeArticle(docSnap))
+            );
             return {
               tag,
-              articles: tagSnapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                  id: doc.id,
-                  title: data.title,
-                  content: data.content,
-                  date: data.date ? data.date : new Date(),
-                  summary: data.summary || data.content?.substring(0, 160)
-                };
-              })
+              articles: articlesWithSlug.map((article) => ({
+                ...article,
+                summary: article.summary || article.content?.substring(0, 160)
+              }))
             };
           }));
           setOtherGsCollections(otherTagResults);
@@ -553,6 +684,8 @@ const Home = () => {
     : 'Join CivicCentre IAS, where aspirants transform into leaders. Your journey to becoming an IAS officer starts here.';
 
   const heroCtaHref = civicCentrePath('/courses');
+  const resolvedLatestUpdates =
+    latestUpdates.length > 0 ? latestUpdates : FALLBACK_LATEST_UPDATES;
 
   const defaultSectionTitle = isGsTag ? `${activeTagId} Highlights` : 'Latest Updates';
   const closeLeadModal = () => setShowLeadModal(false);
@@ -576,112 +709,6 @@ const Home = () => {
       <div className="page-layout">
         <div className="main-column">
           <div className="main-content-wrapper">
-            {/* Latest Updates Section - Moved to top */}
-            <section className="content-section" id={isGsTag ? 'gs-article-feed' : 'latest-updates'}>
-              <div className="section-card">
-                <h2>
-                  {isDateFiltered ? `Articles from ${formatDate(selectedDate)}` : defaultSectionTitle}
-                  {isDateFiltered && (
-                    <button 
-                      onClick={clearDateFilter}
-                      className="clear-filter-btn"
-                      style={{
-                        marginLeft: '1rem',
-                        padding: '0.25rem 0.5rem',
-                        fontSize: '0.8rem',
-                        background: '#ef4444',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '0.25rem',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Clear Filter
-                    </button>
-                  )}
-                </h2>
-                {loading ? (
-                  <p>Loading updates...</p>
-                ) : (
-                  <div className="section-content">
-                    {isDateFiltered ? (
-                      filteredArticles.length > 0 ? (
-                        filteredArticles.map((article) => (
-                          <div key={article.id} className="content-item">
-                            <h3>
-                              <Link to={`/current-affairs/${article.id}`} className="content-link">
-                                {article.title}
-                              </Link>
-                            </h3>
-                            <div className="update-meta">
-                              {article.domains?.gs && (
-                                <Link to={`/gs/${article.domains.gs}`} className="tag-link">
-                                  {article.domains.gs}
-                                </Link>
-                              )}
-                              <span className="date">{formatDate(article.date)}</span>
-                            </div>
-                            <p className="summary">
-                              {article.content ? `${article.content.substring(0, 150)}...` : 'Summary not available.'}
-                            </p>
-                          </div>
-                        ))
-                      ) : (
-                        <p>No articles found for {formatDate(selectedDate)}</p>
-                      )
-                    ) : (
-                      (latestUpdates.length > 0 ? latestUpdates : [
-                        { id: 'placeholder-1', title: "UPSC CSE 2026-27 PCM Mentorship classes", content: "Mentorship classes for UPSC CSE 2026-27 PCM.", category: "UPSC", date: new Date(), source: 'CivicCentre IAS', link: '/updates' },
-                        { id: 'placeholder-2', title: "UPSC CSE Mains 2025 GS FLMT", content: "Full Length Mock Tests for UPSC CSE Mains 2025 GS.", category: "UPSC", date: new Date(), source: 'CivicCentre IAS', link: '/updates' },
-                        { id: 'placeholder-3', title: "Mains Sectional Tests Series 2025 Batch-2", content: "Batch-2 of Mains Sectional Tests Series for 2025.", category: "UPSC", date: new Date(), source: 'CivicCentre IAS', link: '/updates' },
-                        { id: 'placeholder-4', title: "Mains 2026 Naipunyata+ A Long Term Program", content: "A long term program for Mains 2026.", category: "UPSC", date: new Date(), source: 'CivicCentre IAS', link: '/updates' },
-                        { id: 'placeholder-5', title: "Mains 2025-26 NAIPUNYATA+", content: "NAIPUNYATA+ for Mains 2025-26.", category: "UPSC", date: new Date(), source: 'CivicCentre IAS', link: '/updates' },
-                      ]).map((update) => {
-                        const updateSource = update.source || 'CivicCentre IAS';
-                        const updateLink = civicCentrePath(update.link || '/updates');
-                        const updateSnippet = update.content ? `${update.content.substring(0, 150)}...` : 'Details coming soon.';
-                        const updateCategory = update.category || 'General';
-                        const normalizedCategory = updateCategory.toUpperCase();
-                        const categoryIsGs = GS_TAGS.includes(normalizedCategory);
-                        return (
-                          <div key={update.id} className="content-item">
-                            <h3>
-                              {update.isImportant && <span className="important-badge">Important</span>}
-                              <a href={updateLink} className="content-link" target="_blank" rel="noopener noreferrer">
-                                {update.title}
-                              </a>
-                            </h3>
-                            <div className="update-meta">
-                              {categoryIsGs ? (
-                                <Link to={`/gs/${normalizedCategory}`} className="tag-link">
-                                  {normalizedCategory}
-                                </Link>
-                              ) : (
-                                <span className="category">{updateCategory}</span>
-                              )}
-                              <span className="source">From {updateSource}</span>
-                              <span className="date">{formatDate(update.date)}</span>
-                            </div>
-                            <p className="summary">{updateSnippet}</p>
-                          </div>
-                        );
-                      })
-                    )}
-                    {!isDateFiltered && (
-                      <a
-                        href={civicCentrePath('/updates')}
-                        className="card-button"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        View All Updates <ArrowRight />
-                      </a>
-                    )}
-                  </div>
-                )}
-              </div>
-            </section>
-
             <div className="main-sections-grid" style={{ marginTop: 0 }}>
               {/* Today's Quiz Section */}
               <section className="content-section">
@@ -713,108 +740,93 @@ const Home = () => {
                         </p>
                       )}
                       {quizSubmitted && (
-                        <>
-                          {showLeadModal && (
-                            <div className="quiz-lead-modal">
-                              <div className="quiz-lead-backdrop" onClick={closeLeadModal} />
-                              <div className="quiz-lead-dialog quiz-lead-wrapper">
-                                <button
-                                  type="button"
-                                  className="quiz-lead-close"
-                                  onClick={closeLeadModal}
-                                  aria-label="Close lead capture form"
-                                >
-                                  &times;
-                                </button>
-                                <h4>Stay Updated with CivicCentre IAS</h4>
-                                <p className="quiz-lead-score">
-                                  You scored <strong>{quizScore}</strong> out of <strong>{todaysQuiz.questions?.length ?? quizResponses.length}</strong>.
-                                  Share your details to receive regular updates and next steps.
-                                </p>
-                                {leadStatus.message && (
-                                  <p className={`quiz-lead-status ${leadStatus.type || ''}`}>
-                                    {leadStatus.message}
-                                  </p>
-                                )}
-                                <form className="quiz-lead-form" onSubmit={handleLeadSubmit}>
-                                  <div className="quiz-lead-field">
-                                    <label htmlFor="quiz-lead-name">Full Name</label>
-                                    <input
-                                    id="quiz-lead-name"
-                                    type="text"
-                                    value={quizLeadForm.name}
-                                    onChange={handleLeadInputChange('name')}
-                                    placeholder="Enter your name"
-                                    required
-                                  />
-                                </div>
-                                <div className="quiz-lead-field">
-                                  <label htmlFor="quiz-lead-mobile">Mobile Number</label>
-                                  <input
-                                    id="quiz-lead-mobile"
-                                    type="tel"
-                                    value={quizLeadForm.mobile}
-                                    onChange={handleLeadInputChange('mobile')}
-                                    placeholder="10-digit mobile number"
-                                    required
-                                  />
-                                </div>
-                                  <div className="quiz-lead-actions">
-                                    <button
-                                      type="button"
-                                      className="quiz-lead-button secondary"
-                                      onClick={handleSendOtp}
-                                      disabled={leadSubmitting}
-                                    >
-                                      {otpSent ? 'Resend OTP' : 'Send OTP'}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="quiz-lead-button secondary"
-                                      onClick={handleVerifyOtp}
-                                      disabled={!otpSent || leadSubmitting}
-                                    >
-                                      Verify OTP
-                                    </button>
-                                  </div>
-                                  <div className="quiz-lead-field otp-field">
-                                    <label htmlFor="quiz-lead-otp">Enter OTP</label>
-                                    <input
-                                    id="quiz-lead-otp"
-                                    type="text"
-                                    value={quizLeadForm.otp}
-                                    onChange={handleLeadInputChange('otp')}
-                                    placeholder="Enter the OTP"
-                                    disabled={!otpSent}
-                                    required
-                                  />
-                                </div>
-                                  <div className="quiz-lead-submit">
-                                    <button
-                                      type="submit"
-                                      className="quiz-lead-button primary"
-                                      disabled={!otpVerified || leadSubmitting}
-                                    >
-                                      {leadSubmitting ? 'Saving...' : 'Submit Details'}
-                                    </button>
-                                  </div>
-                                </form>
-                              </div>
-                            </div>
-                          )}
-                          {!showLeadModal && (
-                            <div className="quiz-lead-inline-cta">
-                              <p>Thanks for completing the quiz! Share your details to receive curated updates.</p>
+                        <div className={`quiz-lead-modal ${showLeadModal ? 'visible' : ''}`}>
+                          <div className="quiz-lead-dialog quiz-lead-wrapper">
+                            <div className="quiz-lead-header">
+                              <h4>Stay Updated with CivicCentre IAS</h4>
                               <button
                                 type="button"
-                                className="quiz-lead-inline-button"
-                                onClick={() => setShowLeadModal(true)}
+                                className="quiz-lead-close"
+                                onClick={closeLeadModal}
+                                aria-label="Close lead capture form"
                               >
-                                Open Details Form
+                                &times;
                               </button>
                             </div>
-                          )}
-                        </>
+                            <p className="quiz-lead-score">
+                              You scored <strong>{quizScore}</strong> out of <strong>{todaysQuiz.questions?.length ?? quizResponses.length}</strong>.
+                              Share your details to receive regular updates and next steps.
+                            </p>
+                            {leadStatus.message && (
+                              <p className={`quiz-lead-status ${leadStatus.type || ''}`}>
+                                {leadStatus.message}
+                              </p>
+                            )}
+                            <form className="quiz-lead-form" onSubmit={handleLeadSubmit}>
+                              <div className="quiz-lead-field">
+                                <label htmlFor="quiz-lead-name">Full Name</label>
+                                <input
+                                  id="quiz-lead-name"
+                                  type="text"
+                                  value={quizLeadForm.name}
+                                  onChange={handleLeadInputChange('name')}
+                                  placeholder="Enter your name"
+                                  required
+                                />
+                              </div>
+                              <div className="quiz-lead-field">
+                                <label htmlFor="quiz-lead-mobile">Mobile Number</label>
+                                <input
+                                  id="quiz-lead-mobile"
+                                  type="tel"
+                                  value={quizLeadForm.mobile}
+                                  onChange={handleLeadInputChange('mobile')}
+                                  placeholder="10-digit mobile number"
+                                  required
+                                />
+                              </div>
+                              <div className="quiz-lead-actions">
+                                <button
+                                  type="button"
+                                  className="quiz-lead-button secondary"
+                                  onClick={handleSendOtp}
+                                  disabled={leadSubmitting}
+                                >
+                                  {otpSent ? 'Resend OTP' : 'Send OTP'}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="quiz-lead-button secondary"
+                                  onClick={handleVerifyOtp}
+                                  disabled={!otpSent || leadSubmitting}
+                                >
+                                  Verify OTP
+                                </button>
+                              </div>
+                              <div className="quiz-lead-field otp-field">
+                                <label htmlFor="quiz-lead-otp">Enter OTP</label>
+                                <input
+                                  id="quiz-lead-otp"
+                                  type="text"
+                                  value={quizLeadForm.otp}
+                                  onChange={handleLeadInputChange('otp')}
+                                  placeholder="Enter the OTP"
+                                  disabled={!otpSent}
+                                  required
+                                />
+                              </div>
+                              <div className="quiz-lead-submit">
+                                <button
+                                  type="submit"
+                                  className="quiz-lead-button primary"
+                                  disabled={!otpVerified || leadSubmitting}
+                                >
+                                  {leadSubmitting ? 'Saving...' : 'Submit Details'}
+                                </button>
+                              </div>
+                            </form>
+                          </div>
+                        </div>
                       )}
                     </div>
                   ) : (
@@ -828,17 +840,20 @@ const Home = () => {
               </section>
 
               {/* Daily Articles Section */}
-              <section className="content-section">
-                <div className="section-card">
+              <section className="content-section daily-articles-section">
+                <div className="section-card daily-articles-card">
                   <h2>Daily Articles</h2>
                   {loading ? (
                     <p>Loading articles...</p>
                   ) : (
-                    <div className="section-content">
+                    <div className="section-content daily-articles-list">
                       {dailyArticles.map((article) => (
-                        <div key={article.id} className="content-item">
+                        <div key={article.id} className="content-item daily-article-item">
                           <h3>
-                            <Link to={`/current-affairs/${article.id}`} className="content-link">
+                            <Link
+                              to={`/current-affairs/${article.slug || article.id}`}
+                              className="content-link"
+                            >
                               {article.title}
                             </Link>
                           </h3>
@@ -868,7 +883,9 @@ const Home = () => {
                             <ul className="other-gs-list">
                               {articles.map((article) => (
                                 <li key={article.id}>
-                                  <Link to={`/current-affairs/${article.id}`}>{article.title}</Link>
+                                  <Link to={`/current-affairs/${article.slug || article.id}`}>
+                                    {article.title}
+                                  </Link>
                                   <span>{formatDate(article.date)}</span>
                                 </li>
                               ))}
@@ -889,89 +906,65 @@ const Home = () => {
 
             <PrimetimeVideos />
 
-            {/* Previous Year Papers Section */}
-            <section className="content-management-section">
-              <h2>Previous Year Papers</h2>
-              <div className="papers-grid">
-                <div className="paper-card">
-                  <h3>2023 Prelims Paper</h3>
-                  <p>Download and analyze the latest prelims paper.</p>
-                  <a
-                    className="download-button"
-                    href={civicCentrePath('/previous-year-papers')}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Download PDF
-                  </a>
-                </div>
-                <div className="paper-card">
-                  <h3>2022 Mains GS Paper I</h3>
-                  <p>Review the Mains General Studies Paper I from 2022.</p>
-                  <a
-                    className="download-button"
-                    href={civicCentrePath('/previous-year-papers')}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Download PDF
-                  </a>
-                </div>
-                 <div className="paper-card">
-                  <h3>2021 Essay Paper</h3>
-                  <p>Practice writing with the essay topics from 2021.</p>
-                  <a
-                    className="download-button"
-                    href={civicCentrePath('/previous-year-papers')}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Download PDF
-                  </a>
+            {/* State Current Affairs Section */}
+            <section className="content-section state-current-affairs-section">
+              <div className="section-card state-current-affairs-card">
+                <h2>State Current Affairs</h2>
+                <p className="section-note">Choose your state to explore focused analysis and resources tailored for regional exams.</p>
+                <div className="state-current-affairs-list">
+                  {stateHighlights.map((state) => (
+                    <Link
+                      key={state.id}
+                      to={state.path}
+                      className="state-current-affairs-link"
+                    >
+                      <span className="state-current-affairs-label">{state.label}</span>
+                      <span className="state-current-affairs-caption">{state.highlight}</span>
+                    </Link>
+                  ))}
                 </div>
               </div>
             </section>
 
-            {/* CivicCentre IAS Monthly Magazines and Publications Section */}
-            <section className="content-management-section">
-              <h2>CivicCentre IAS Monthly Magazines & Publications</h2>
+            {/* CivicCentre Publications Section */}
+            <section className="content-management-section publications-section">
+              <h2>CivicCentre Publications</h2>
               <div className="magazines-grid">
-                <div className="magazine-card">
-                  <h3>CivicCentre IAS Magazine - September 2025</h3>
-                  <p>Comprehensive analysis of current affairs and exam-oriented articles.</p>
-                  <a
-                    className="download-button"
-                    href={civicCentrePath('/magazines')}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Read Now
-                  </a>
-                </div>
-                <div className="magazine-card">
-                  <h3>CivicCentre IAS Magazine - August 2025</h3>
-                  <p>In-depth coverage of national and international events.</p>
-                  <a
-                    className="download-button"
-                    href={civicCentrePath('/magazines')}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Read Now
-                  </a>
-                </div>
-                <div className="magazine-card">
-                  <h3>UPSC Success Stories - Vol. 3</h3>
-                  <p>Inspiring journeys of successful IAS candidates.</p>
-                  <a
-                    className="download-button"
-                    href={civicCentrePath('/magazines')}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Get Your Copy
-                  </a>
-                </div>
+                {civicCentrePublications.map((publication) => (
+                  <div key={publication.id} className="magazine-card">
+                    <h3>{publication.title}</h3>
+                    <p>{publication.description}</p>
+                    <a
+                      className="download-button"
+                      href={publication.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {publication.cta || 'View'}
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Previous Year Papers Section */}
+            <section className="content-management-section previous-year-section">
+              <h2>Previous Year Papers</h2>
+              <div className="papers-grid">
+                {previousYearPapers.map((paper) => (
+                  <div key={paper.id} className="paper-card">
+                    <h3>{paper.title}</h3>
+                    <p>{paper.description}</p>
+                    <a
+                      className="download-button"
+                      href={paper.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {paper.cta || 'Download'}
+                    </a>
+                  </div>
+                ))}
               </div>
             </section>
 
@@ -1044,11 +1037,109 @@ const Home = () => {
 
         {/* Sidebar */}
         <aside className="sidebar">
+          {/* Latest Updates Section */}
+          <section className="content-section" id={isGsTag ? 'gs-article-feed' : 'latest-updates'}>
+            <div className="section-card latest-updates-card">
+              <h2 className="latest-heading">
+                {!isDateFiltered && (
+                  <span className="latest-heading-label">Latest</span>
+                )}
+                <span className="latest-heading-title">
+                  {isDateFiltered ? `Articles from ${formatDate(selectedDate)}` : defaultSectionTitle}
+                </span>
+                {isDateFiltered && (
+                  <button 
+                    onClick={clearDateFilter}
+                    className="clear-filter-btn"
+                    style={{
+                      marginLeft: '1rem',
+                      padding: '0.25rem 0.5rem',
+                      fontSize: '0.8rem',
+                      background: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.25rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Clear Filter
+                  </button>
+                )}
+              </h2>
+              {loading ? (
+                <p>Loading updates...</p>
+              ) : (
+                <div className="section-content">
+                  {isDateFiltered ? (
+                    filteredArticles.length > 0 ? (
+                    filteredArticles.map((article) => (
+                      <div key={article.id} className="content-item">
+                        <h3>
+                          <Link
+                            to={`/current-affairs/${article.slug || article.id}`}
+                            className="content-link"
+                          >
+                            {article.title}
+                          </Link>
+                        </h3>
+                          <div className="update-meta">
+                            {article.domains?.gs && (
+                              <Link to={`/gs/${article.domains.gs}`} className="tag-link">
+                                {article.domains.gs}
+                              </Link>
+                            )}
+                            <span className="date">{formatDate(article.date)}</span>
+                          </div>
+                          <p className="summary">
+                            {article.content ? `${article.content.substring(0, 150)}...` : 'Summary not available.'}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <p>No articles found for {formatDate(selectedDate)}</p>
+                    )
+                    ) : (
+                    resolvedLatestUpdates.slice(0, 2).map((update) => {
+                      const updateSource = update.source || 'CivicCentre IAS';
+                      const updateLink = civicCentrePath(update.link || '/updates');
+                      const updateSnippet = update.content ? `${update.content.substring(0, 150)}...` : 'Details coming soon.';
+                      const updateCategory = update.category || 'General';
+                      const normalizedCategory = updateCategory.toUpperCase();
+                      const categoryIsGs = GS_TAGS.includes(normalizedCategory);
+                      return (
+                        <div key={update.id} className="content-item">
+                          <h3>
+                            {update.isImportant && <span className="important-badge">Important</span>}
+                            <a href={updateLink} className="content-link" target="_blank" rel="noopener noreferrer">
+                              {update.title}
+                            </a>
+                          </h3>
+                          <div className="update-meta">
+                            {categoryIsGs ? (
+                              <Link to={`/gs/${normalizedCategory}`} className="tag-link">
+                                {normalizedCategory}
+                              </Link>
+                            ) : (
+                              <span className="category">{updateCategory}</span>
+                            )}
+                            <span className="source">From {updateSource}</span>
+                            <span className="date">{formatDate(update.date)}</span>
+                          </div>
+                          <p className="summary">{updateSnippet}</p>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+
           {/* Calendar Section */}
           <div className="sidebar-section calendar-section">
             <h3>
               <CalendarIcon className="inline-block mr-2 h-5 w-5" />
-              Calendar
+              Filter Articles by Date
             </h3>
             <div className="calendar-wrapper">
               <DatePicker
@@ -1066,10 +1157,13 @@ const Home = () => {
           {/* Important Links Section */}
           <div className="sidebar-section">
             <h3>Recent Articles</h3>
-            <ul className="updates-list">
-              {currentAffairs.map(article => (
+            <ul className="updates-list sidebar-article-list">
+              {currentAffairs.slice(0, 3).map(article => (
                 <li key={article.id}>
-                  <Link to={`/current-affairs/${article.id}`} className="sidebar-article-link">
+                  <Link
+                    to={`/current-affairs/${article.slug || article.id}`}
+                    className="sidebar-article-link"
+                  >
                     {article.title}
                   </Link>
                   <small>Posted {formatDate(article.date)}</small>
@@ -1087,3 +1181,4 @@ const Home = () => {
 };
 
 export default Home;
+

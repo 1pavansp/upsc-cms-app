@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, IconButton } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, IconButton, Box, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 
@@ -30,6 +30,25 @@ const ManageCurrentAffairs = ({ setEditingArticle }) => {
     const [error, setError] = useState(null);
     const [open, setOpen] = useState(false);
     const [selectedArticle, setSelectedArticle] = useState(null);
+    const [categoryFilter, setCategoryFilter] = useState('all');
+
+    const uniqueCategories = useMemo(() => {
+        const categorySet = new Set();
+        articles.forEach(article => {
+            const normalizedCategory = (article.category || '').toString().trim();
+            if (normalizedCategory) {
+                categorySet.add(normalizedCategory);
+            }
+        });
+        return Array.from(categorySet).sort((a, b) => a.localeCompare(b));
+    }, [articles]);
+
+    const filteredArticles = useMemo(() => {
+        if (categoryFilter === 'all') {
+            return articles;
+        }
+        return articles.filter(article => (article.category || '').toString().trim() === categoryFilter);
+    }, [articles, categoryFilter]);
 
     useEffect(() => {
         const fetchArticles = async () => {
@@ -48,6 +67,12 @@ const ManageCurrentAffairs = ({ setEditingArticle }) => {
         fetchArticles();
     }, []);
 
+    useEffect(() => {
+        if (categoryFilter !== 'all' && !uniqueCategories.includes(categoryFilter)) {
+            setCategoryFilter('all');
+        }
+    }, [categoryFilter, uniqueCategories]);
+
     const handleClickOpen = (article) => {
         setSelectedArticle(article);
         setOpen(true);
@@ -62,7 +87,7 @@ const ManageCurrentAffairs = ({ setEditingArticle }) => {
         if (selectedArticle) {
             try {
                 await deleteDoc(doc(db, 'current-affairs', selectedArticle.id));
-                setArticles(articles.filter(article => article.id !== selectedArticle.id));
+                setArticles(prevArticles => prevArticles.filter(article => article.id !== selectedArticle.id));
                 handleClose();
             } catch (err) {
                 setError('Failed to delete article.');
@@ -71,11 +96,33 @@ const ManageCurrentAffairs = ({ setEditingArticle }) => {
         }
     };
 
+    const handleCategoryFilterChange = (event) => {
+        setCategoryFilter(event.target.value);
+    };
+
     if (loading) return <p>Loading articles...</p>;
     if (error) return <p>Error: {error}</p>;
 
     return (
         <Paper sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2, gap: 2, flexWrap: 'wrap' }}>
+                <FormControl size="small" sx={{ minWidth: 220 }}>
+                    <InputLabel id="current-affairs-category-filter-label">Filter by Category</InputLabel>
+                    <Select
+                        labelId="current-affairs-category-filter-label"
+                        value={categoryFilter}
+                        label="Filter by Category"
+                        onChange={handleCategoryFilterChange}
+                    >
+                        <MenuItem value="all">All Categories</MenuItem>
+                        {uniqueCategories.map(category => (
+                            <MenuItem key={category} value={category}>
+                                {category}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+            </Box>
             <TableContainer>
                 <Table>
                     <TableHead>
@@ -87,17 +134,27 @@ const ManageCurrentAffairs = ({ setEditingArticle }) => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {articles.map((article) => (
-                            <TableRow key={article.id}>
-                                <TableCell>{article.title}</TableCell>
-                                <TableCell>{article.category}</TableCell>
-                                <TableCell>{formatDate(article.date)}</TableCell>
-                                <TableCell>
-                                    <IconButton onClick={() => setEditingArticle(article)}><EditIcon /></IconButton>
-                                    <IconButton onClick={() => handleClickOpen(article)}><DeleteIcon /></IconButton>
+                        {filteredArticles.length > 0 ? (
+                            filteredArticles.map((article) => (
+                                <TableRow key={article.id}>
+                                    <TableCell>{article.title}</TableCell>
+                                    <TableCell>{article.category}</TableCell>
+                                    <TableCell>{formatDate(article.date)}</TableCell>
+                                    <TableCell>
+                                        <IconButton onClick={() => setEditingArticle(article)}><EditIcon /></IconButton>
+                                        <IconButton onClick={() => handleClickOpen(article)}><DeleteIcon /></IconButton>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={4} align="center">
+                                    {categoryFilter === 'all'
+                                        ? 'No current affairs articles found.'
+                                        : `No articles found for "${categoryFilter}".`}
                                 </TableCell>
                             </TableRow>
-                        ))}
+                        )}
                     </TableBody>
                 </Table>
             </TableContainer>

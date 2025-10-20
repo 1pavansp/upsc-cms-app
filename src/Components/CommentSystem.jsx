@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { collection, addDoc, getDocs, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Heart, MessageCircle, User, Clock } from 'lucide-react';
 import './CommentSystem.css';
 
@@ -326,7 +325,6 @@ const CommentSystem = () => {
               required
             />
           </div>
-          
           <button 
             type="submit" 
             className="submit-btn"

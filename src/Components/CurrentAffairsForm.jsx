@@ -9,6 +9,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import { generateUniqueSlug } from '../utils/articleUtils';
 
 const gsSubjects = {
     'GS1': ['History', 'Geography', 'Society', 'Art & Culture'],
@@ -16,6 +17,19 @@ const gsSubjects = {
     'GS3': ['Economy', 'Environment', 'Science & Technology', 'Security'],
     'GS4': ['Ethics', 'Integrity', 'Aptitude', 'Case Studies']
 };
+
+const CUSTOM_CATEGORY_VALUE = 'custom';
+
+const CATEGORY_OPTIONS = [
+    { value: 'General', label: 'General Current Affairs' },
+    { value: 'Telangana', label: 'Telangana Current Affairs' },
+    { value: 'Andhra Pradesh', label: 'Andhra Pradesh Current Affairs' },
+    { value: 'GS1', label: 'GS1 Focus' },
+    { value: 'GS2', label: 'GS2 Focus' },
+    { value: 'GS3', label: 'GS3 Focus' },
+    { value: 'GS4', label: 'GS4 Focus' },
+    { value: CUSTOM_CATEGORY_VALUE, label: 'Custom Category' }
+];
 
 const CurrentAffairsForm = ({ editingArticle, onUpdateSuccess }) => {
     const [user] = useAuthState(auth);
@@ -31,10 +45,16 @@ const CurrentAffairsForm = ({ editingArticle, onUpdateSuccess }) => {
         image: null,
         imagePreview: null,
         videoUrl: '',
-        pyqs: { prelims: [], mains: [] }
+        pyqs: { prelims: [], mains: [] },
+        slug: ''
     });
+    const [categorySelection, setCategorySelection] = useState('General');
+    const [customCategory, setCustomCategory] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+    const isPredefinedCategory = (value) =>
+        CATEGORY_OPTIONS.some(option => option.value !== CUSTOM_CATEGORY_VALUE && option.value === value);
 
     useEffect(() => {
         if (editingArticle) {
@@ -43,14 +63,25 @@ const CurrentAffairsForm = ({ editingArticle, onUpdateSuccess }) => {
                 date: editingArticle.date.toDate().toISOString().split('T')[0],
                 image: null,
                 imagePreview: editingArticle.imageUrl || null,
+                slug: editingArticle.slug || ''
             });
+            const normalizedCategory = editingArticle.category || 'General';
+            if (isPredefinedCategory(normalizedCategory)) {
+                setCategorySelection(normalizedCategory);
+                setCustomCategory('');
+            } else {
+                setCategorySelection(CUSTOM_CATEGORY_VALUE);
+                setCustomCategory(normalizedCategory);
+            }
         } else {
             setCurrentAffairsData({
                 title: '', summary: '', content: '', date: new Date().toISOString().split('T')[0],
                 category: 'General', examRelevance: { prelims: false, mains: false },
                 domains: { gs: '', subjects: [] }, image: null, imagePreview: null, videoUrl: '',
-                pyqs: { prelims: [], mains: [] }
+                pyqs: { prelims: [], mains: [] }, slug: ''
             });
+            setCategorySelection('General');
+            setCustomCategory('');
         }
     }, [editingArticle]);
 
@@ -74,6 +105,15 @@ const CurrentAffairsForm = ({ editingArticle, onUpdateSuccess }) => {
             setSnackbar({ open: true, message: 'Please fill in all required fields.', severity: 'error' });
             return;
         }
+        const resolvedCategory = (currentAffairsData.category || '').trim();
+        if (!resolvedCategory) {
+            setSnackbar({ open: true, message: 'Please select or enter a category.', severity: 'error' });
+            return;
+        }
+        const generatedSlug = await generateUniqueSlug(
+            currentAffairsData.title,
+            editingArticle?.id || null
+        );
 
         setIsSubmitting(true);
         try {
@@ -82,13 +122,15 @@ const CurrentAffairsForm = ({ editingArticle, onUpdateSuccess }) => {
                 imageUrl = await handleImageUpload(currentAffairsData.image);
             }
 
-            const { image, imagePreview, ...rest } = currentAffairsData; // Destructure to exclude image and imagePreview
+            const { image: _image, imagePreview: _imagePreview, ...rest } = currentAffairsData; // Destructure to exclude image and imagePreview
             const dataToSave = {
                 ...rest, // Spread the rest of the data
+                category: resolvedCategory,
                 imageUrl,
                 date: new Date(currentAffairsData.date),
                 timestamp: serverTimestamp(),
-                authorId: user.uid
+                authorId: user.uid,
+                slug: generatedSlug
             };
 
             if (editingArticle) {
@@ -103,8 +145,10 @@ const CurrentAffairsForm = ({ editingArticle, onUpdateSuccess }) => {
                     title: '', summary: '', content: '', date: new Date().toISOString().split('T')[0],
                     category: 'General', examRelevance: { prelims: false, mains: false },
                     domains: { gs: '', subjects: [] }, image: null, imagePreview: null, videoUrl: '',
-                    pyqs: { prelims: [], mains: [] }
+                    pyqs: { prelims: [], mains: [] }, slug: ''
                 });
+                setCategorySelection('General');
+                setCustomCategory('');
                 setActiveStep(0);
             }
         } catch (error) {
@@ -130,6 +174,32 @@ const CurrentAffairsForm = ({ editingArticle, onUpdateSuccess }) => {
             ? currentAffairsData.domains.subjects.filter(s => s !== subject)
             : [...currentAffairsData.domains.subjects, subject];
         handleDomainChange('subjects', newSubjects);
+    };
+
+    const handleCategorySelectionChange = (event) => {
+        const value = event.target.value;
+        setCategorySelection(value);
+        if (value === CUSTOM_CATEGORY_VALUE) {
+            setCurrentAffairsData(prev => ({
+                ...prev,
+                category: customCategory
+            }));
+        } else {
+            setCustomCategory('');
+            setCurrentAffairsData(prev => ({
+                ...prev,
+                category: value
+            }));
+        }
+    };
+
+    const handleCustomCategoryChange = (event) => {
+        const value = event.target.value;
+        setCustomCategory(value);
+        setCurrentAffairsData(prev => ({
+            ...prev,
+            category: value
+        }));
     };
 
     // Handlers for PYQs
@@ -184,7 +254,7 @@ const CurrentAffairsForm = ({ editingArticle, onUpdateSuccess }) => {
                         <Box sx={{ display: 'grid', gap: '1.5rem', mt: 2 }}>
                             <TextField label="Title" fullWidth value={currentAffairsData.title} onChange={(e) => setCurrentAffairsData({ ...currentAffairsData, title: e.target.value })} required />
                             <TextField label="Summary" fullWidth multiline rows={3} value={currentAffairsData.summary} onChange={(e) => setCurrentAffairsData({ ...currentAffairsData, summary: e.target.value })} required />
-                                                        <FormControl fullWidth>
+                            <FormControl fullWidth>
                                 <FormLabel component="legend" sx={{ mb: 1 }}>Detailed Content</FormLabel>
                                 <ReactQuill
                                     theme="snow"
@@ -193,6 +263,31 @@ const CurrentAffairsForm = ({ editingArticle, onUpdateSuccess }) => {
                                 />
                             </FormControl>
                             <TextField type="date" label="Date" value={currentAffairsData.date} onChange={(e) => setCurrentAffairsData({ ...currentAffairsData, date: e.target.value })} InputLabelProps={{ shrink: true }} required />
+                            <FormControl fullWidth>
+                                <InputLabel id="current-affairs-category-label">Category</InputLabel>
+                                <Select
+                                    labelId="current-affairs-category-label"
+                                    value={categorySelection}
+                                    label="Category"
+                                    onChange={handleCategorySelectionChange}
+                                >
+                                    {CATEGORY_OPTIONS.map(option => (
+                                        <MenuItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                            {categorySelection === CUSTOM_CATEGORY_VALUE && (
+                                <TextField
+                                    label="Custom Category"
+                                    value={customCategory}
+                                    onChange={handleCustomCategoryChange}
+                                    fullWidth
+                                    required
+                                    placeholder="Enter category name"
+                                />
+                            )}
 
                             <FormControl fullWidth>
                                 <FormLabel component="legend">Article Image</FormLabel>

@@ -11,15 +11,9 @@ import "react-datepicker/dist/react-datepicker.css";
 import './Home.css'; // Reuse styles from Home
 import './GsArticlesPage.css'; // Import new styles
 import CommentSystem from './CommentSystem';
+import { ensureArticleHasSlug, slugify } from '../utils/articleUtils';
 
 const GS_TAGS = ['GS1', 'GS2', 'GS3', 'GS4'];
-const slugify = (value = '') =>
-  value
-    .toLowerCase()
-    .trim()
-    .replace(/&/g, 'and')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
 
 const GsArticlesPage = () => {
   const { tagId } = useParams();
@@ -39,20 +33,11 @@ const GsArticlesPage = () => {
     return Array.from(variants).filter(Boolean);
   };
 
-  const normalizeArticleDoc = (doc) => {
-    const data = doc.data();
-    const rawDate = data.date;
-    const normalizedDate = rawDate
-      ? rawDate.toDate
-        ? rawDate.toDate()
-        : rawDate instanceof Date
-          ? rawDate
-          : new Date(rawDate)
-      : new Date();
+  const normalizeArticleDoc = async (docSnap) => {
+    const article = await ensureArticleHasSlug(docSnap);
     return {
-      id: doc.id,
-      ...data,
-      date: normalizedDate,
+      ...article,
+      date: article.date || new Date()
     };
   };
 
@@ -66,11 +51,12 @@ const GsArticlesPage = () => {
           limit(100)
         ];
         const snapshot = await getDocs(query(collection(db, 'current-affairs'), ...constraints));
-        snapshot.docs.forEach(doc => {
-          if (!articlesMap.has(doc.id)) {
-            articlesMap.set(doc.id, normalizeArticleDoc(doc));
+        for (const docSnap of snapshot.docs) {
+          if (!articlesMap.has(docSnap.id)) {
+            const article = await normalizeArticleDoc(docSnap);
+            articlesMap.set(docSnap.id, article);
           }
-        });
+        }
       } catch (err) {
         console.error(`Error fetching GS articles for ${gsValue}:`, err);
       }
@@ -109,7 +95,10 @@ const GsArticlesPage = () => {
           limit(7)
         );
         const recentArticlesSnapshot = await getDocs(recentArticlesQuery);
-        setCurrentAffairs(recentArticlesSnapshot.docs.map(normalizeArticleDoc));
+        const recentArticles = await Promise.all(
+          recentArticlesSnapshot.docs.map((docSnap) => normalizeArticleDoc(docSnap))
+        );
+        setCurrentAffairs(recentArticles);
 
       } catch (error) {
         console.error('Error fetching GS page data:', error);
@@ -192,7 +181,7 @@ const GsArticlesPage = () => {
   };
 
   return (
-    <main className="main-content">
+    <main className="main-content gs-articles-page">
       <div className="page-layout">
         <div className="main-column">
           <div className="main-content-wrapper">
@@ -210,7 +199,7 @@ const GsArticlesPage = () => {
                   <ul className="article-list">
                     {articlesToDisplay.map(article => (
                       <li key={article.id}>
-                        <Link to={`/current-affairs/${article.id}`}>
+                        <Link to={`/current-affairs/${article.slug || article.id}`}>
                           <h4>{article.title}</h4>
                         </Link>
                         {Array.isArray(article.domains?.subjects) && article.domains.subjects.length > 0 && (
@@ -255,7 +244,9 @@ const GsArticlesPage = () => {
                         <ul className="subject-group-list">
                           {subjectArticles.map(article => (
                             <li key={article.id}>
-                              <Link to={`/current-affairs/${article.id}`}>{article.title}</Link>
+                              <Link to={`/current-affairs/${article.slug || article.id}`}>
+                                {article.title}
+                              </Link>
                               <span>{formatDate(article.date)}</span>
                             </li>
                           ))}
@@ -289,7 +280,7 @@ const GsArticlesPage = () => {
           <div className="sidebar-section calendar-section">
             <h3>
               <CalendarIcon className="inline-block mr-2 h-5 w-5" />
-              Calendar
+              Filter Articles by Date
             </h3>
             <div className="calendar-wrapper">
               <DatePicker
@@ -316,7 +307,10 @@ const GsArticlesPage = () => {
             <ul className="updates-list">
               {currentAffairs.map(article => (
                 <li key={article.id}>
-                  <Link to={`/current-affairs/${article.id}`} className="sidebar-article-link">
+                  <Link
+                    to={`/current-affairs/${article.slug || article.id}`}
+                    className="sidebar-article-link"
+                  >
                     {article.title}
                   </Link>
                   <small>Posted {formatDate(article.date)}</small>

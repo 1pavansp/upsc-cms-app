@@ -1,14 +1,23 @@
+.subject-articles-page .section-card {
+  padding: 1.25rem 1.4rem;
+  border-radius: 14px;
+}
+
+.subject-articles-page .section-card h2 {
+  font-size: 1.35rem;
+}
+
 .subject-page .subject-page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
 }
 
 .subject-page .subject-page-title {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: 1.6rem;
   font-weight: 600;
 }
 
@@ -161,7 +170,7 @@
     font-size: 0.9rem;
   }
 
-  .subject-page .section-card {
+  .subject-articles-page .section-card {
     padding: 1.1rem 1.2rem;
     border-radius: 0.85rem;
   }

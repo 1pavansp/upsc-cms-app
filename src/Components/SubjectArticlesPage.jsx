@@ -1,13 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  Timestamp,
-  limit
-} from 'firebase/firestore';
+import { collection, getDocs, query, where, Timestamp, limit } from 'firebase/firestore';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ArrowRight, Calendar as CalendarIcon } from 'lucide-react';
@@ -15,6 +8,7 @@ import { db } from '../firebase';
 import { formatDate, getDateRange } from '../utils/dateUtils';
 import './Home.css';
 import './SubjectArticlesPage.css';
+import { ensureArticleHasSlug, slugify } from '../utils/articleUtils';
 
 const SUBJECTS_BY_GS = {
   GS1: ['History', 'Geography', 'Society', 'Art & Culture'],
@@ -23,14 +17,6 @@ const SUBJECTS_BY_GS = {
   GS4: ['Ethics', 'Integrity', 'Aptitude', 'Case Studies']
 };
 
-const slugify = (value = '') =>
-  value
-    .toLowerCase()
-    .trim()
-    .replace(/&/g, 'and')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-
 const normalizeDate = (rawDate) => {
   if (!rawDate) return new Date();
   if (rawDate instanceof Date) return rawDate;
@@ -38,12 +24,11 @@ const normalizeDate = (rawDate) => {
   return new Date(rawDate);
 };
 
-const normalizeDoc = (doc) => {
-  const data = doc.data();
+const normalizeDoc = async (docSnap) => {
+  const article = await ensureArticleHasSlug(docSnap);
   return {
-    id: doc.id,
-    ...data,
-    date: normalizeDate(data?.date)
+    ...article,
+    date: normalizeDate(article?.date)
   };
 };
 
@@ -104,9 +89,10 @@ const SubjectArticlesPage = () => {
             limit(100)
           )
         );
-        const subjectArticles = sortByDateDesc(
-          subjectSnapshot.docs.map(normalizeDoc)
+        const subjectArticlesRaw = await Promise.all(
+          subjectSnapshot.docs.map((docSnap) => normalizeDoc(docSnap))
         );
+        const subjectArticles = sortByDateDesc(subjectArticlesRaw);
 
         setArticles(subjectArticles);
         setFilteredArticles([]);
@@ -119,9 +105,10 @@ const SubjectArticlesPage = () => {
             limit(100)
           )
         );
-        const recentDocs = sortByDateDesc(
-          recentSnapshot.docs.map(normalizeDoc)
-        ).slice(0, 7);
+        const recentDocsRaw = await Promise.all(
+          recentSnapshot.docs.map((docSnap) => normalizeDoc(docSnap))
+        );
+        const recentDocs = sortByDateDesc(recentDocsRaw).slice(0, 7);
         setRecentArticles(recentDocs);
 
         const subjects = SUBJECTS_BY_GS[normalizedTagId] || [];
@@ -157,9 +144,10 @@ const SubjectArticlesPage = () => {
           limit(100)
         )
       );
-      const datedArticles = sortByDateDesc(
-        filteredSnapshot.docs.map(normalizeDoc)
+      const datedArticlesRaw = await Promise.all(
+        filteredSnapshot.docs.map((docSnap) => normalizeDoc(docSnap))
       );
+      const datedArticles = sortByDateDesc(datedArticlesRaw);
 
       setFilteredArticles(datedArticles);
       setIsDateFiltered(true);
@@ -193,7 +181,7 @@ const SubjectArticlesPage = () => {
   const tagParam = tagId || '';
 
   return (
-    <main className="main-content subject-page">
+    <main className="main-content subject-page subject-articles-page">
       <div className="page-layout">
         <div className="main-column">
           <div className="main-content-wrapper">
@@ -236,7 +224,7 @@ const SubjectArticlesPage = () => {
                         {articlesToDisplay.map((article) => (
                           <li key={article.id}>
                             <Link
-                              to={`/current-affairs/${article.id}`}
+                              to={`/current-affairs/${article.slug || article.id}`}
                               className="subject-article-link"
                             >
                               <h3>{article.title}</h3>
@@ -291,7 +279,7 @@ const SubjectArticlesPage = () => {
           <div className="sidebar-section calendar-section">
             <h3>
               <CalendarIcon className="inline-block mr-2 h-5 w-5" />
-              Calendar
+              Filter Articles by Date
             </h3>
             <div className="calendar-wrapper">
               <DatePicker
@@ -324,7 +312,7 @@ const SubjectArticlesPage = () => {
                 {recentArticles.map((article) => (
                   <li key={article.id}>
                     <Link
-                      to={`/current-affairs/${article.id}`}
+                      to={`/current-affairs/${article.slug || article.id}`}
                       className="sidebar-article-link"
                     >
                       {article.title}

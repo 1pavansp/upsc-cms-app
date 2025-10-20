@@ -1,5 +1,15 @@
 /* src/Components/GsArticlesPage.css */
 
+.gs-articles-page .section-card {
+  padding: 1.2rem 1.35rem;
+  border-radius: 14px;
+}
+
+.gs-articles-page .section-card h2 {
+  font-size: 1.15rem;
+  margin-bottom: 0.45rem;
+}
+
 .article-list {
   list-style: none;
   padding: 0;

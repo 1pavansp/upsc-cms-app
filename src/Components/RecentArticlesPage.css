@@ -1,4 +1,6 @@
 .recent-articles-page .section-card {
+  padding: 1.25rem 1.35rem;
+  border-radius: 14px;
   display: flex;
   flex-direction: column;
   gap: 1.1rem;
@@ -110,7 +112,7 @@
 
 @media (max-width: 768px) {
   .recent-articles-page .section-card {
-    padding: 1.15rem 1.25rem;
+    padding: 1.1rem 1.2rem;
     border-radius: 0.85rem;
   }
 

@@ -74,7 +74,7 @@ const StudyMaterialManager = () => {
 
     const handleSaveMaterial = async (materialData) => {
         try {
-            const { id, file, ...dataToSave } = materialData;
+            const { id, file: _file, ...dataToSave } = materialData;
             dataToSave.lastUpdated = serverTimestamp();
 
             if (id) {

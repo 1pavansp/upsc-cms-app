@@ -8,6 +8,7 @@ import App from './App';
 import GsArticlesPage from './Components/GsArticlesPage';
 import SubjectArticlesPage from './Components/SubjectArticlesPage';
 import RecentArticlesPage from './Components/RecentArticlesPage';
+import StateArticlesPage from './Components/StateArticlesPage';
 
 export const router = createBrowserRouter([
   {
@@ -37,6 +38,10 @@ export const router = createBrowserRouter([
       {
         path: "gs/:tagId/:subjectId",
         element: <SubjectArticlesPage />
+      },
+      {
+        path: "state/:stateId",
+        element: <StateArticlesPage />
       },
       {
         path: "recent-articles",

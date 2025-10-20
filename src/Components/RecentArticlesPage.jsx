@@ -1,39 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  collection,
-  getDocs,
-  orderBy,
-  query,
-  where,
-  Timestamp
-} from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, where, Timestamp } from 'firebase/firestore';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { db } from '../firebase';
 import { formatDate, getDateRange } from '../utils/dateUtils';
 import CommentSystem from './CommentSystem';
+import { ensureArticleHasSlug } from '../utils/articleUtils';
 import './Home.css';
 import './RecentArticlesPage.css';
-
-const normalizeArticle = (doc) => {
-  const data = doc.data();
-  const rawDate = data.date;
-  const normalizedDate = rawDate
-    ? rawDate instanceof Date
-      ? rawDate
-      : typeof rawDate.toDate === 'function'
-        ? rawDate.toDate()
-        : new Date(rawDate)
-    : new Date();
-
-  return {
-    id: doc.id,
-    title: data.title || 'Untitled Article',
-    date: normalizedDate
-  };
-};
 
 const RecentArticlesPage = () => {
   const [articles, setArticles] = useState([]);
@@ -53,7 +29,16 @@ const RecentArticlesPage = () => {
           orderBy('date', 'desc')
         );
         const snapshot = await getDocs(articlesQuery);
-        const fetchedArticles = snapshot.docs.map(normalizeArticle);
+        const fetchedArticles = await Promise.all(
+          snapshot.docs.map(async (docSnap) => {
+            const article = await ensureArticleHasSlug(docSnap);
+            return {
+              ...article,
+              title: article.title || 'Untitled Article',
+              date: article.date || new Date()
+            };
+          })
+        );
         setArticles(fetchedArticles);
       } catch (err) {
         console.error('Error fetching recent articles:', err);
@@ -94,7 +79,16 @@ const RecentArticlesPage = () => {
       );
 
       const snapshot = await getDocs(dateQuery);
-      const datedArticles = snapshot.docs.map(normalizeArticle);
+      const datedArticles = await Promise.all(
+        snapshot.docs.map(async (docSnap) => {
+          const article = await ensureArticleHasSlug(docSnap);
+          return {
+            ...article,
+            title: article.title || 'Untitled Article',
+            date: article.date || new Date()
+          };
+        })
+      );
       setFilteredArticles(datedArticles);
       setIsDateFiltered(true);
     } catch (err) {
@@ -149,7 +143,7 @@ const RecentArticlesPage = () => {
                   <ul className="recent-articles-list">
                     {articlesToDisplay.map((article) => (
                       <li key={article.id}>
-                        <Link to={`/current-affairs/${article.id}`}>
+                        <Link to={`/current-affairs/${article.slug || article.id}`}>
                           {article.title}
                         </Link>
                         <span>{formatDate(article.date)}</span>
@@ -172,7 +166,7 @@ const RecentArticlesPage = () => {
           <div className="sidebar-section calendar-section">
             <h3>
               <CalendarIcon className="inline-block mr-2 h-5 w-5" />
-              Calendar
+              Filter Articles by Date
             </h3>
             <div className="calendar-wrapper">
               <DatePicker
@@ -203,7 +197,10 @@ const RecentArticlesPage = () => {
             <ul className="updates-list">
               {recentHighlights.map((article) => (
                 <li key={article.id}>
-                  <Link to={`/current-affairs/${article.id}`} className="sidebar-article-link">
+                  <Link
+                    to={`/current-affairs/${article.slug || article.id}`}
+                    className="sidebar-article-link"
+                  >
                     {article.title}
                   </Link>
                   <small>Posted {formatDate(article.date)}</small>
