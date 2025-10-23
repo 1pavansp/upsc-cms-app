@@ -14,16 +14,16 @@
 
 .primetime-section .primetime-header p {
   margin: 0.25rem 0 0;
-  color: #475569;
+  color: var(--text-secondary);
 }
 
 .primetime-section .primetime-carousel {
   position: relative;
   overflow: hidden;
   border-radius: 1rem;
-  border: 1px solid #e2e8f0;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #312e81 100%);
-  color: #e2e8f0;
+  border: 1px solid var(--border-card);
+  background: var(--primetime-bg-gradient, linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #312e81 100%));
+  color: var(--primetime-text-color, #e2e8f0);
 }
 
 .primetime-section .primetime-track {
@@ -41,9 +41,9 @@
 
 .primetime-section .primetime-player-wrapper {
   position: relative;
-  padding-bottom: 56.25%;
+  padding-bottom: var(--aspect-ratio-16-9, 56.25%);
   width: 100%;
-  background: #000;
+  background: var(--color-black, #000);
 }
 
 .primetime-section .primetime-player-wrapper iframe {
@@ -60,22 +60,22 @@
   flex-direction: column;
   justify-content: space-between;
   padding: 2rem;
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(18px);
+  background: var(--primetime-content-bg, rgba(15, 23, 42, 0.75));
+  backdrop-filter: var(--backdrop-filter-blur-xl);
 }
 
 .primetime-section .primetime-slide-content h3 {
   margin: 0.5rem 0 1rem;
   font-size: 1.5rem;
-  font-weight: 600;
-  color: #f8fafc;
+  font-weight: 700;
+  color: var(--primetime-heading-color, #f8fafc);
 }
 
 .primetime-section .primetime-slide-content p {
   margin: 0;
   font-size: 1rem;
   line-height: 1.6;
-  color: rgba(226, 232, 240, 0.85);
+  color: var(--primetime-paragraph-color, rgba(226, 232, 240, 0.85));
 }
 
 .primetime-section .primetime-presenter {
@@ -84,7 +84,7 @@
   gap: 0.4rem;
   padding: 0.35rem 0.85rem;
   background: rgba(59, 130, 246, 0.15);
-  border-radius: 999px;
+  border-radius: var(--border-radius-full);
   font-size: 0.85rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -104,15 +104,15 @@
   width: 10px;
   height: 10px;
   border-radius: 999px;
-  border: none;
-  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid var(--primetime-indicator-border, rgba(255, 255, 255, 0.35));
+  background: var(--primetime-indicator-bg, rgba(255, 255, 255, 0.35));
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .primetime-section .primetime-indicators button.active {
   width: 28px;
-  background: #38bdf8;
+  background: var(--primetime-indicator-active-bg, #38bdf8);
 }
 
 .primetime-section .primetime-placeholder,
@@ -120,9 +120,13 @@
   padding: 3rem;
   border-radius: 1rem;
   border: 1px dashed #94a3b8;
-  text-align: center;
-  color: #64748b;
-  background: rgba(148, 163, 184, 0.08);
+  text-align: center; /* Center align text */
+  color: var(--text-light); /* Use text variable */
+  background: var(--background-card); /* Use card background variable */
+}
+
+.dark .primetime-section .primetime-carousel {
+  border-color: var(--border-card);
 }
 
 @media (max-width: 1024px) {

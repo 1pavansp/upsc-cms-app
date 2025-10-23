@@ -23,7 +23,7 @@
 
 .subject-page .subject-page-subtitle {
   margin: 0.35rem 0 0;
-  color: #636363;
+  color: var(--text-secondary);
   font-size: 0.95rem;
 }
 
@@ -51,8 +51,8 @@
   display: block;
   padding: 1.25rem;
   border-radius: 0.75rem;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--home-plain-card-bg);
+  border: 1px solid var(--home-plain-card-border);
   text-decoration: none;
   color: inherit;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -60,7 +60,7 @@
 
 .subject-page .subject-article-link:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--home-card-shadow);
 }
 
 .subject-page .subject-article-link h3 {
@@ -71,14 +71,14 @@
 
 .subject-page .subject-article-link p {
   margin: 0 0 0.75rem;
-  color: #475569;
+  color: var(--text-secondary);
   font-size: 0.95rem;
 }
 
 .subject-page .subject-article-date {
   display: inline-block;
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--text-light);
   font-weight: 500;
 }
 
@@ -113,7 +113,7 @@
   margin-top: 1.5rem;
   padding: 1rem;
   border-radius: 0.75rem;
-  background: #fef3c7;
+  background: rgba(252, 211, 77, 0.2);
   color: #92400e;
 }
 
@@ -121,7 +121,7 @@
   margin: 0 0 1rem;
   font-size: 0.95rem;
   color: #0369a1;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .subject-page .date-filter-actions {
@@ -133,16 +133,16 @@
 .subject-page .date-filter-reset {
   padding: 0.4rem 0.9rem;
   border-radius: 0.5rem;
-  border: none;
-  background: #dc2626;
-  color: #fff;
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  background: rgba(239, 68, 68, 0.1);
+  color: #b91c1c;
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 500;
 }
 
 .subject-page .date-filter-reset:hover {
-  background: #b91c1c;
+  background: rgba(239, 68, 68, 0.2);
 }
 
 @media (max-width: 900px) {
