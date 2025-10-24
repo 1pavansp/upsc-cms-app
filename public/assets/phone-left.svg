@@ -1,0 +1,18 @@
+<svg width="240" height="480" viewBox="0 0 240 480" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="phoneLeftGradient" x1="0" y1="0" x2="240" y2="480" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0EA74E"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+  </defs>
+  <rect x="12" y="12" width="216" height="456" rx="44" fill="#F1F5F9"/>
+  <rect x="24" y="32" width="192" height="420" rx="32" fill="url(#phoneLeftGradient)"/>
+  <rect x="96" y="24" width="48" height="6" rx="3" fill="#CBD5F5"/>
+  <rect x="110" y="56" width="20" height="4" rx="2" fill="#FFFFFF" opacity="0.8"/>
+  <rect x="80" y="110" width="80" height="80" rx="16" fill="#FFFFFF" opacity="0.2"/>
+  <rect x="60" y="220" width="120" height="16" rx="8" fill="#FFFFFF" opacity="0.3"/>
+  <rect x="60" y="260" width="120" height="16" rx="8" fill="#FFFFFF" opacity="0.25"/>
+  <rect x="60" y="300" width="120" height="16" rx="8" fill="#FFFFFF" opacity="0.2"/>
+  <rect x="90" y="380" width="60" height="8" rx="4" fill="#FFFFFF" opacity="0.6"/>
+  <rect x="100" y="420" width="40" height="40" rx="12" fill="#FFFFFF" opacity="0.5"/>
+</svg>

@@ -1,0 +1,15 @@
+<svg width="260" height="80" viewBox="0 0 260 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="260" height="80" rx="16" fill="#000000"/>
+  <g transform="translate(18 16)">
+    <path d="M18 0L55 22L18 44C12 40 8 34 8 28V16C8 10 12 4 18 0Z" fill="#0EA74E"/>
+    <path d="M18 0L46 18L36 24L18 0Z" fill="#2563EB"/>
+    <path d="M18 44L46 26L36 20L18 44Z" fill="#FACC15"/>
+    <path d="M46 18L56 24L46 30L36 24L46 18Z" fill="#10B981"/>
+  </g>
+  <text x="92" y="34" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="12" letter-spacing="0.2em">
+    GET IT ON
+  </text>
+  <text x="92" y="56" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="600">
+    Google Play
+  </text>
+</svg>

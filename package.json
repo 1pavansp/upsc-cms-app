@@ -26,7 +26,8 @@
     "react-dom": "^18.2.0",
     "react-firebase-hooks": "^5.1.1",
     "react-quill": "^2.0.0",
-    "react-router-dom": "^6.21.1"
+    "react-router-dom": "^6.21.1",
+    "sweetalert2": "^11.26.3"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

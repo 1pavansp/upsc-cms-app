@@ -1,0 +1,24 @@
+<svg width="220" height="60" viewBox="0 0 220 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="logoGradient" x1="0" y1="0" x2="220" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0EA74E"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="taglineGradient" x1="0" y1="0" x2="220" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#1F2937"/>
+    </linearGradient>
+  </defs>
+  <rect x="0.5" y="0.5" width="219" height="59" rx="14" fill="#FFFFFF" stroke="rgba(15, 23, 42, 0.12)"/>
+  <g>
+    <text x="24" y="36" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700" fill="url(#logoGradient)">
+      ExamOTT
+    </text>
+    <text x="26" y="50" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="500" letter-spacing="0.08em" fill="url(#taglineGradient)">
+      CIVICCENTRE IAS
+    </text>
+    <circle cx="180" cy="30" r="16" fill="rgba(14, 167, 78, 0.12)"/>
+    <circle cx="180" cy="30" r="10" fill="url(#logoGradient)"/>
+    <path d="M176 30L179 33L184 28" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
