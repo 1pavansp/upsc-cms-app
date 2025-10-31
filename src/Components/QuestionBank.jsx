@@ -7,6 +7,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import QuestionForm from './QuestionForm'; // Import QuestionForm
+import { createSnippet, stripHtml } from '../utils/textUtils';
 
 const QuestionBank = () => {
     const [questions, setQuestions] = useState([]); // This will hold our questions
@@ -56,11 +57,22 @@ const QuestionBank = () => {
         setEditingQuestionData(null); // Clear editing data
     };
 
-    const filteredQuestions = questions.filter(q =>
-        q.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        q.topic.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        q.difficulty.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const filteredQuestions = questions.filter(q => {
+        if (!normalizedSearch) {
+            return true;
+        }
+
+        const questionText = stripHtml(q.question).toLowerCase();
+        const topic = (q.topic || '').toLowerCase();
+        const difficulty = (q.difficulty || '').toLowerCase();
+
+        return (
+            questionText.includes(normalizedSearch) ||
+            topic.includes(normalizedSearch) ||
+            difficulty.includes(normalizedSearch)
+        );
+    });
 
     return (
         <Box>
@@ -123,7 +135,7 @@ const QuestionBank = () => {
                                     {filteredQuestions.length > 0 ? (
                                         filteredQuestions.map((q) => (
                                             <TableRow key={q.id} hover>
-                                                <TableCell>{q.question}</TableCell>
+                                                <TableCell>{createSnippet(q.question, 90) || 'N/A'}</TableCell>
                                                 <TableCell>{q.topic}</TableCell>
                                                 <TableCell>{q.difficulty}</TableCell>
                                                 <TableCell align="right"> 

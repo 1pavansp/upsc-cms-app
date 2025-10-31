@@ -7,9 +7,9 @@ import { db, storage, auth } from '../firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import RichTextEditor from './RichTextEditor';
 import { generateUniqueSlug } from '../utils/articleUtils';
+import { stripHtml } from '../utils/textUtils';
 
 const gsSubjects = {
     'GS1': ['History', 'Geography', 'Society', 'Art & Culture'],
@@ -101,7 +101,7 @@ const CurrentAffairsForm = ({ editingArticle, onUpdateSuccess }) => {
             setSnackbar({ open: true, message: 'You must be logged in.', severity: 'error' });
             return;
         }
-        if (!currentAffairsData.title || !currentAffairsData.content) {
+        if (!currentAffairsData.title || stripHtml(currentAffairsData.content).length === 0) {
             setSnackbar({ open: true, message: 'Please fill in all required fields.', severity: 'error' });
             return;
         }
@@ -256,10 +256,11 @@ const CurrentAffairsForm = ({ editingArticle, onUpdateSuccess }) => {
                             <TextField label="Summary" fullWidth multiline rows={3} value={currentAffairsData.summary} onChange={(e) => setCurrentAffairsData({ ...currentAffairsData, summary: e.target.value })} required />
                             <FormControl fullWidth>
                                 <FormLabel component="legend" sx={{ mb: 1 }}>Detailed Content</FormLabel>
-                                <ReactQuill
-                                    theme="snow"
+                                <RichTextEditor
                                     value={currentAffairsData.content}
                                     onChange={handleContentChange}
+                                    uploadFolder="current-affairs/content"
+                                    minHeight={320}
                                 />
                             </FormControl>
                             <TextField type="date" label="Date" value={currentAffairsData.date} onChange={(e) => setCurrentAffairsData({ ...currentAffairsData, date: e.target.value })} InputLabelProps={{ shrink: true }} required />

@@ -5,6 +5,8 @@ import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/fi
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage, auth } from '../firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
+import RichTextEditor from './RichTextEditor';
+import { stripHtml } from '../utils/textUtils';
 
 const LatestUpdatesForm = ({ editingUpdate, onUpdateSuccess }) => {
     const [user] = useAuthState(auth);
@@ -51,7 +53,8 @@ const LatestUpdatesForm = ({ editingUpdate, onUpdateSuccess }) => {
             setSnackbar({ open: true, message: 'You must be logged in.', severity: 'error' });
             return;
         }
-        if (!formData.title || !formData.content || !formData.category) {
+        const contentText = stripHtml(formData.content);
+        if (!formData.title || contentText.length === 0 || !formData.category) {
             setSnackbar({ open: true, message: 'Please fill in all required fields.', severity: 'error' });
             return;
         }
@@ -119,15 +122,12 @@ const LatestUpdatesForm = ({ editingUpdate, onUpdateSuccess }) => {
                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                         required
                     />
-                    <TextField
+                    <RichTextEditor
                         label="Update Content"
-                        variant="outlined"
-                        fullWidth
-                        multiline
-                        rows={4}
                         value={formData.content}
-                        onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                        required
+                        onChange={(content) => setFormData({ ...formData, content })}
+                        uploadFolder="latest-updates/content"
+                        minHeight={220}
                     />
                     <FormControl fullWidth required>
                         <InputLabel>Category</InputLabel>

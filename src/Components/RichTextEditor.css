@@ -1,0 +1,48 @@
+.rich-text-editor-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rich-text-editor-label {
+  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+}
+
+.rich-text-editor {
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  overflow: hidden;
+  background: var(--background-card, #ffffff);
+}
+
+.rich-text-editor .ql-toolbar {
+  border: none;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(248, 250, 252, 0.8);
+}
+
+.rich-text-editor .ql-container {
+  border: none;
+}
+
+.rich-text-editor.is-disabled .ql-toolbar {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.rich-text-editor.is-disabled .ql-container {
+  background-color: rgba(226, 232, 240, 0.3);
+}
+
+.rich-text-editor-status {
+  font-size: 0.85rem;
+}
+
+.rich-text-editor-status.is-uploading {
+  color: #1d4ed8;
+}
+
+.rich-text-editor-status.is-error {
+  color: #b91c1c;
+}

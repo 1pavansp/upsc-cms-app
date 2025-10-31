@@ -4,6 +4,8 @@ import { Button, TextField, Select, MenuItem, FormControl, InputLabel, Box, Typo
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
+import RichTextEditor from './RichTextEditor';
+import { stripHtml } from '../utils/textUtils';
 
 const QuizForm = ({ editingQuiz, onUpdateSuccess }) => {
     const [user] = useAuthState(auth);
@@ -25,25 +27,74 @@ const QuizForm = ({ editingQuiz, onUpdateSuccess }) => {
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
     useEffect(() => {
+        const normalizeDate = (rawDate) => {
+            if (!rawDate) {
+                return new Date();
+            }
+            if (rawDate instanceof Date) {
+                return rawDate;
+            }
+            if (typeof rawDate?.toDate === 'function') {
+                return rawDate.toDate();
+            }
+            const parsed = new Date(rawDate);
+            return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+        };
+
+        const normalizeQuestion = (question = {}) => {
+            const baseOptions = Array.isArray(question.options) ? [...question.options] : ['', '', '', ''];
+            while (baseOptions.length < 4) {
+                baseOptions.push('');
+            }
+            if (baseOptions.length > 4) {
+                baseOptions.length = 4;
+            }
+
+            const resolvedCorrect =
+                typeof question.correctAnswer === 'number'
+                    ? question.correctAnswer
+                    : Number.isInteger(Number(question.correctAnswer))
+                        ? Number(question.correctAnswer)
+                        : 0;
+
+            return {
+                question: question.question || '',
+                options: baseOptions,
+                correctAnswer: resolvedCorrect,
+                answer: question.answer ?? question.correctAnswer ?? resolvedCorrect,
+                explanation: question.explanation || ''
+            };
+        };
+
+        const resetQuiz = () => ({
+            title: '',
+            description: '',
+            date: new Date().toISOString().split('T')[0],
+            questions: [
+                {
+                    question: '',
+                    options: ['', '', '', ''],
+                    correctAnswer: 0,
+                    explanation: ''
+                }
+            ]
+        });
+
         if (editingQuiz) {
+            const normalizedDate = normalizeDate(editingQuiz.date);
+            const normalizedQuestions = Array.isArray(editingQuiz.questions) && editingQuiz.questions.length > 0
+                ? editingQuiz.questions.map(normalizeQuestion)
+                : [normalizeQuestion()];
+
             setQuizData({
                 ...editingQuiz,
-                date: editingQuiz.date.toDate().toISOString().split('T')[0],
+                date: normalizedDate.toISOString().split('T')[0],
+                questions: normalizedQuestions
             });
+            setActiveStep(0);
         } else {
-            setQuizData({
-                title: '',
-                description: '',
-                date: new Date().toISOString().split('T')[0],
-                questions: [
-                    {
-                        question: '',
-                        options: ['', '', '', ''],
-                        correctAnswer: 0,
-                        explanation: ''
-                    }
-                ]
-            });
+            setQuizData(resetQuiz());
+            setActiveStep(0);
         }
     }, [editingQuiz]);
 
@@ -61,8 +112,15 @@ const QuizForm = ({ editingQuiz, onUpdateSuccess }) => {
             setSnackbar({ open: true, message: 'You must be logged in.', severity: 'error' });
             return;
         }
-        if (!quizData.title || !quizData.description) {
+        const descriptionText = stripHtml(quizData.description);
+        if (!quizData.title || descriptionText.length === 0) {
             setSnackbar({ open: true, message: 'Please fill in all required fields.', severity: 'error' });
+            return;
+        }
+
+        const hasEmptyQuestion = quizData.questions.some((question) => stripHtml(question.question).length === 0);
+        if (hasEmptyQuestion) {
+            setSnackbar({ open: true, message: 'Each question must include prompt text.', severity: 'error' });
             return;
         }
 
@@ -157,15 +215,12 @@ const QuizForm = ({ editingQuiz, onUpdateSuccess }) => {
                                 onChange={(e) => setQuizData({ ...quizData, title: e.target.value })}
                                 required
                             />
-                            <TextField
+                            <RichTextEditor
                                 label="Description"
-                                variant="outlined"
-                                fullWidth
-                                multiline
-                                rows={3}
                                 value={quizData.description}
-                                onChange={(e) => setQuizData({ ...quizData, description: e.target.value })}
-                                required
+                                onChange={(content) => setQuizData({ ...quizData, description: content })}
+                                uploadFolder="daily-quiz/descriptions"
+                                minHeight={180}
                             />
                             <TextField
                                 type="date"
@@ -194,14 +249,13 @@ const QuizForm = ({ editingQuiz, onUpdateSuccess }) => {
                         {quizData.questions.map((question, qIndex) => (
                             <Paper key={qIndex} sx={{ p: 2, my: 2, border: '1px solid #ddd' }}>
                                 <Typography variant="h6">Question {qIndex + 1}</Typography>
-                                <TextField
+                                <RichTextEditor
                                     label="Question Text"
-                                    fullWidth
-                                    multiline
-                                    rows={2}
                                     value={question.question}
-                                    onChange={(e) => handleQuestionChange(qIndex, 'question', e.target.value)}
-                                    sx={{ my: 1 }}
+                                    onChange={(content) => handleQuestionChange(qIndex, 'question', content)}
+                                    uploadFolder="daily-quiz/questions"
+                                    minHeight={160}
+                                    className="quiz-question-editor"
                                 />
                                 {question.options.map((option, oIndex) => (
                                     <Box key={oIndex} sx={{ display: 'flex', alignItems: 'center', my: 1 }}>
@@ -226,14 +280,13 @@ const QuizForm = ({ editingQuiz, onUpdateSuccess }) => {
                                         />
                                     </Box>
                                 ))}
-                                <TextField
-                                    label="Explanation"
-                                    fullWidth
-                                    multiline
-                                    rows={2}
+                                <RichTextEditor
+                                    label="Explanation (Optional)"
                                     value={question.explanation}
-                                    onChange={(e) => handleQuestionChange(qIndex, 'explanation', e.target.value)}
-                                    sx={{ my: 1 }}
+                                    onChange={(content) => handleQuestionChange(qIndex, 'explanation', content)}
+                                    uploadFolder="daily-quiz/explanations"
+                                    minHeight={140}
+                                    className="quiz-explanation-editor"
                                 />
                                 <Button variant="outlined" color="error" onClick={() => removeQuestion(qIndex)}>
                                     Remove Question

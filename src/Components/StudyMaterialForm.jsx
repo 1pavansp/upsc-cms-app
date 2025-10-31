@@ -4,17 +4,17 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '../firebase';
 
-const StudyMaterialForm = ({ editingMaterial, onSave, onCancel }) => {
-    const initialFormState = {
-        title: '',
-        type: 'PDF',
-        category: '',
-        file: null,
-        description: '',
-        fileUrl: ''
-    };
+const createInitialStudyMaterialFormState = () => ({
+    title: '',
+    type: 'PDF',
+    category: '',
+    file: null,
+    description: '',
+    fileUrl: ''
+});
 
-    const [formData, setFormData] = useState(initialFormState);
+const StudyMaterialForm = ({ editingMaterial, onSave, onCancel }) => {
+    const [formData, setFormData] = useState(() => createInitialStudyMaterialFormState());
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
 
@@ -22,7 +22,7 @@ const StudyMaterialForm = ({ editingMaterial, onSave, onCancel }) => {
         if (editingMaterial) {
             setFormData(editingMaterial);
         } else {
-            setFormData(initialFormState);
+            setFormData(createInitialStudyMaterialFormState());
         }
     }, [editingMaterial]);
 
@@ -73,7 +73,7 @@ const StudyMaterialForm = ({ editingMaterial, onSave, onCancel }) => {
     const resetForm = () => {
         setIsUploading(false);
         setUploadProgress(0);
-        setFormData(initialFormState);
+        setFormData(createInitialStudyMaterialFormState());
     }
 
     return (

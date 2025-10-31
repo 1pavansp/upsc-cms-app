@@ -1,24 +1,26 @@
 // s:\Cms\upsc-cms-app\src\Components\QuestionForm.jsx
 
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, TextField, Button, MenuItem, FormControl, InputLabel, Select, RadioGroup, FormControlLabel, Radio, FormLabel } from '@mui/material';
+import { Box, Typography, TextField, Button, MenuItem, FormControl, InputLabel, Select, RadioGroup, FormControlLabel, Radio, FormLabel, Paper } from '@mui/material';
+import RichTextEditor from './RichTextEditor';
+import { stripHtml } from '../utils/textUtils';
+
+const createInitialQuestionFormState = () => ({
+    question: '',
+    options: ['', '', '', ''],
+    answer: '',
+    topic: '',
+    difficulty: 'Easy',
+});
 
 const QuestionForm = ({ editingQuestion, onSave, onCancel }) => {
-    const initialFormState = {
-        question: '',
-        options: ['', '', '', ''],
-        answer: '',
-        topic: '',
-        difficulty: 'Easy',
-    };
-
-    const [formData, setFormData] = useState(initialFormState);
+    const [formData, setFormData] = useState(() => createInitialQuestionFormState());
 
     useEffect(() => {
         if (editingQuestion) {
             setFormData(editingQuestion);
         } else {
-            setFormData(initialFormState);
+            setFormData(createInitialQuestionFormState());
         }
     }, [editingQuestion]);
 
@@ -35,8 +37,12 @@ const QuestionForm = ({ editingQuestion, onSave, onCancel }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (stripHtml(formData.question).length === 0) {
+            window.alert('Please provide question text before saving.');
+            return;
+        }
         onSave(formData);
-        setFormData(initialFormState); // Reset form after save
+        setFormData(createInitialQuestionFormState()); // Reset form after save
     };
 
     return (
@@ -45,15 +51,12 @@ const QuestionForm = ({ editingQuestion, onSave, onCancel }) => {
                 {editingQuestion ? 'Edit Question' : 'Add New Question'}
             </Typography>
             <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <TextField
+                <RichTextEditor
                     label="Question Text"
-                    name="question"
                     value={formData.question}
-                    onChange={handleChange}
-                    fullWidth
-                    required
-                    multiline
-                    rows={3}
+                    onChange={(content) => setFormData(prev => ({ ...prev, question: content }))}
+                    uploadFolder="question-bank/questions"
+                    minHeight={180}
                 />
                 <FormLabel component="legend">Options</FormLabel>
                 {formData.options.map((option, index) => (

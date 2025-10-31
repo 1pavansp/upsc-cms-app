@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { collection, getDocs, orderBy, query, where, Timestamp } from 'firebase/firestore';
 import DatePicker from 'react-datepicker';
@@ -7,7 +7,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { db } from '../firebase';
 import { formatDate, getDateRange } from '../utils/dateUtils';
 import CommentSystem from './CommentSystem';
-import { ensureArticleHasSlug } from '../utils/articleUtils';
+import { ensureArticleHasSlug, getArticlePublicUrl, getArticleRelativePath } from '../utils/articleUtils';
 import './Home.css';
 import './RecentArticlesPage.css';
 
@@ -18,6 +18,8 @@ const RecentArticlesPage = () => {
   const [isDateFiltered, setIsDateFiltered] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [copiedArticleId, setCopiedArticleId] = useState(null);
+  const copyTimeoutRef = useRef(null);
 
   useEffect(() => {
     const fetchArticles = async () => {
@@ -118,6 +120,36 @@ const RecentArticlesPage = () => {
     setError(null);
   };
 
+  const handleCopyLink = useCallback(async (article) => {
+    const shareUrl = getArticlePublicUrl(article);
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopiedArticleId(article.id);
+        if (copyTimeoutRef.current) {
+          clearTimeout(copyTimeoutRef.current);
+        }
+        copyTimeoutRef.current = setTimeout(() => {
+          setCopiedArticleId(null);
+          copyTimeoutRef.current = null;
+        }, 2000);
+      } else {
+        throw new Error('Clipboard API unavailable');
+      }
+    } catch (copyError) {
+      console.error('Failed to copy article link:', copyError);
+      window.prompt('Press Ctrl+C to copy this article link:', shareUrl);
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <main className="main-content recent-articles-page">
       <div className="page-layout">
@@ -141,14 +173,39 @@ const RecentArticlesPage = () => {
                   <p className="error-copy">{error}</p>
                 ) : articlesToDisplay.length > 0 ? (
                   <ul className="recent-articles-list">
-                    {articlesToDisplay.map((article) => (
-                      <li key={article.id}>
-                        <Link to={`/current-affairs/${article.slug || article.id}`}>
-                          {article.title}
-                        </Link>
-                        <span>{formatDate(article.date)}</span>
-                      </li>
-                    ))}
+                    {articlesToDisplay.map((article) => {
+                      const articlePath = getArticleRelativePath(article);
+                      const publicUrl = getArticlePublicUrl(article);
+                      const isCopied = copiedArticleId === article.id;
+
+                      return (
+                        <li key={article.id}>
+                          <div className="recent-article-primary">
+                            <Link to={articlePath}>
+                              {article.title}
+                            </Link>
+                            <span>{formatDate(article.date)}</span>
+                          </div>
+                          <div className="article-share-row">
+                            <a
+                              href={publicUrl}
+                              className="article-share-url"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {publicUrl}
+                            </a>
+                            <button
+                              type="button"
+                              className="copy-article-link"
+                              onClick={() => handleCopyLink(article)}
+                            >
+                              {isCopied ? 'Copied!' : 'Copy link'}
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
                 ) : (
                   <p>No articles found for the selected date.</p>

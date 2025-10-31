@@ -1,6 +1,6 @@
 // src/components/Home.jsx
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { collection, getDocs, query, orderBy, limit, where, Timestamp, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ArrowRight, Calendar as CalendarIcon } from 'lucide-react';
@@ -9,9 +9,11 @@ import "react-datepicker/dist/react-datepicker.css";
 import { db } from '../firebase';
 import { formatDate, getDateRange } from '../utils/dateUtils';
 import { ensureArticleHasSlug } from '../utils/articleUtils';
+import { createSnippet } from '../utils/textUtils';
 import Quiz from './Quiz';
 import CommentSystem from './CommentSystem';
 import PrimetimeVideos from './PrimetimeVideos';
+import DownloadAppSection from './DownloadAppSection';
 import './Home.css';
 import { civicCentrePath } from '../constants/civicCentre';
 
@@ -94,6 +96,23 @@ const Home = () => {
     useState(FALLBACK_STATE_HIGHLIGHTS);
   const [quizLoading, setQuizLoading] = useState(true);
   const [showLeadModal, setShowLeadModal] = useState(false);
+
+  const renderRichText = (markup, fallbackText) => {
+    if (typeof markup === 'string' && markup.trim().length > 0) {
+      return (
+        <div
+          className="rich-text-block"
+          dangerouslySetInnerHTML={{ __html: markup }}
+        />
+      );
+    }
+
+    if (fallbackText) {
+      return <p>{fallbackText}</p>;
+    }
+
+    return null;
+  };
 
   const previousYearPapers = [
     {
@@ -178,20 +197,34 @@ const Home = () => {
     fetchStateHighlightContent();
   }, []);
 
-  const resetQuizLeadState = (questionCount = 0) => {
-    setQuizResponses(Array(questionCount).fill(null));
-    setQuizSubmitted(false);
-    setQuizScore(0);
-    setQuizLeadForm({ name: '', mobile: '', otp: '' });
-    setOtpSent(false);
-    setOtpVerified(false);
-    setGeneratedOtp('');
-    setLeadStatus({ type: null, message: '' });
-    setLeadSubmitting(false);
-    setShowLeadModal(false);
-  };
+  const resetQuizLeadState = useCallback(
+    (questionCount = 0) => {
+      setQuizResponses(Array(questionCount).fill(null));
+      setQuizSubmitted(false);
+      setQuizScore(0);
+      setQuizLeadForm({ name: '', mobile: '', otp: '' });
+      setOtpSent(false);
+      setOtpVerified(false);
+      setGeneratedOtp('');
+      setLeadStatus({ type: null, message: '' });
+      setLeadSubmitting(false);
+      setShowLeadModal(false);
+    },
+    [
+      setQuizResponses,
+      setQuizSubmitted,
+      setQuizScore,
+      setQuizLeadForm,
+      setOtpSent,
+      setOtpVerified,
+      setGeneratedOtp,
+      setLeadStatus,
+      setLeadSubmitting,
+      setShowLeadModal
+    ]
+  );
 
-  const resolveQuizDate = (value) => {
+  const resolveQuizDate = useCallback((value) => {
     if (!value) return new Date();
     if (value instanceof Date) return value;
     if (typeof value.toDate === 'function') return value.toDate();
@@ -203,9 +236,9 @@ const Home = () => {
       return new Date(value.seconds * 1000);
     }
     return new Date();
-  };
+  }, []);
 
-  const buildQuizFromDoc = (doc) => {
+  const buildQuizFromDoc = useCallback((doc) => {
     if (!doc) return null;
     const data = doc.data();
     return {
@@ -214,53 +247,59 @@ const Home = () => {
       date: resolveQuizDate(data.date),
       questions: Array.isArray(data.questions) ? data.questions : []
     };
-  };
+  }, [resolveQuizDate]);
 
-  const applyQuizData = (quizData) => {
-    if (quizData) {
-      setTodaysQuiz(quizData);
-      const questionCount = quizData.questions?.length || 0;
-      resetQuizLeadState(questionCount);
-    } else {
-      setTodaysQuiz(null);
-      resetQuizLeadState(0);
-    }
-    setCurrentQuestion(0);
-    setSelectedOption(null);
-    setAnswerStatus(null);
-  };
-
-  const fetchQuizForDate = async (dateValue = new Date()) => {
-    try {
-      setQuizLoading(true);
-      const targetDate = dateValue instanceof Date ? dateValue : new Date(dateValue);
-      const { startOfDay, endOfDay } = getDateRange(targetDate);
-      const startTimestamp = Timestamp.fromDate(startOfDay);
-      const endTimestamp = Timestamp.fromDate(endOfDay);
-
-      const dateScopedQuery = query(
-        collection(db, 'daily-quiz'),
-        where('date', '>=', startTimestamp),
-        where('date', '<=', endTimestamp),
-        orderBy('date', 'desc'),
-        limit(1)
-      );
-
-      const snapshot = await getDocs(dateScopedQuery);
-
-      if (!snapshot.empty) {
-        const quizData = buildQuizFromDoc(snapshot.docs[0]);
-        applyQuizData(quizData);
+  const applyQuizData = useCallback(
+    (quizData) => {
+      if (quizData) {
+        setTodaysQuiz(quizData);
+        const questionCount = quizData.questions?.length || 0;
+        resetQuizLeadState(questionCount);
       } else {
-        applyQuizData(null);
+        setTodaysQuiz(null);
+        resetQuizLeadState(0);
       }
-    } catch (error) {
-      console.error('Error fetching quiz for date:', error);
-      applyQuizData(null);
-    } finally {
-      setQuizLoading(false);
-    }
-  };
+      setCurrentQuestion(0);
+      setSelectedOption(null);
+      setAnswerStatus(null);
+    },
+    [resetQuizLeadState, setTodaysQuiz, setCurrentQuestion, setSelectedOption, setAnswerStatus]
+  );
+
+  const fetchQuizForDate = useCallback(
+    async (dateValue = new Date()) => {
+      try {
+        setQuizLoading(true);
+        const targetDate = dateValue instanceof Date ? dateValue : new Date(dateValue);
+        const { startOfDay, endOfDay } = getDateRange(targetDate);
+        const startTimestamp = Timestamp.fromDate(startOfDay);
+        const endTimestamp = Timestamp.fromDate(endOfDay);
+
+        const dateScopedQuery = query(
+          collection(db, 'daily-quiz'),
+          where('date', '>=', startTimestamp),
+          where('date', '<=', endTimestamp),
+          orderBy('date', 'desc'),
+          limit(1)
+        );
+
+        const snapshot = await getDocs(dateScopedQuery);
+
+        if (!snapshot.empty) {
+          const quizData = buildQuizFromDoc(snapshot.docs[0]);
+          applyQuizData(quizData);
+        } else {
+          applyQuizData(null);
+        }
+      } catch (error) {
+        console.error('Error fetching quiz for date:', error);
+        applyQuizData(null);
+      } finally {
+        setQuizLoading(false);
+      }
+    },
+    [applyQuizData, buildQuizFromDoc]
+  );
 
   const handleLeadInputChange = (field) => (event) => {
     const { value } = event.target;
@@ -487,53 +526,56 @@ const Home = () => {
   // Removed featured articles state
 
   // Function to fetch articles by specific date
-  const fetchArticlesByDate = async (date) => {
-    try {
-      const { startOfDay, endOfDay } = getDateRange(date);
-      
-      // Create Firestore timestamps
-      const startTimestamp = Timestamp.fromDate(startOfDay);
-      const endTimestamp = Timestamp.fromDate(endOfDay);
-      
-      // Fetch current affairs for the selected date
-      let affairsQuery = query(
-        collection(db, 'current-affairs'),
-        where('date', '>=', startTimestamp),
-        where('date', '<=', endTimestamp),
-        orderBy('date', 'desc')
-      );
+  const fetchArticlesByDate = useCallback(
+    async (date) => {
+      try {
+        const { startOfDay, endOfDay } = getDateRange(date);
+        
+        // Create Firestore timestamps
+        const startTimestamp = Timestamp.fromDate(startOfDay);
+        const endTimestamp = Timestamp.fromDate(endOfDay);
+        
+        // Fetch current affairs for the selected date
+        let affairsQuery = query(
+          collection(db, 'current-affairs'),
+          where('date', '>=', startTimestamp),
+          where('date', '<=', endTimestamp),
+          orderBy('date', 'desc')
+        );
 
-      if (isGsTag && activeTagId) {
-        affairsQuery = query(
-          collection(db, 'current-affairs'),
-          where('domains.gs', '==', activeTagId),
-          where('date', '>=', startTimestamp),
-          where('date', '<=', endTimestamp),
-          orderBy('date', 'desc')
+        if (isGsTag && activeTagId) {
+          affairsQuery = query(
+            collection(db, 'current-affairs'),
+            where('domains.gs', '==', activeTagId),
+            where('date', '>=', startTimestamp),
+            where('date', '<=', endTimestamp),
+            orderBy('date', 'desc')
+          );
+        } else if (activeTagId) {
+          affairsQuery = query(
+            collection(db, 'current-affairs'),
+            where('domains.subjects', 'array-contains', activeTagId),
+            where('date', '>=', startTimestamp),
+            where('date', '<=', endTimestamp),
+            orderBy('date', 'desc')
+          );
+        }
+        
+        const affairsSnapshot = await getDocs(affairsQuery);
+        const dateFilteredArticles = await Promise.all(
+          affairsSnapshot.docs.map((docSnap) => ensureArticleHasSlug(docSnap))
         );
-      } else if (activeTagId) {
-        affairsQuery = query(
-          collection(db, 'current-affairs'),
-          where('domains.subjects', 'array-contains', activeTagId),
-          where('date', '>=', startTimestamp),
-          where('date', '<=', endTimestamp),
-          orderBy('date', 'desc')
-        );
+        
+        setFilteredArticles(dateFilteredArticles);
+        isDateFilteredRef.current = true;
+        setIsDateFiltered(true);
+      } catch (error) {
+        console.error('Error fetching articles by date:', error);
+        setFilteredArticles([]);
       }
-      
-      const affairsSnapshot = await getDocs(affairsQuery);
-      const dateFilteredArticles = await Promise.all(
-        affairsSnapshot.docs.map((docSnap) => ensureArticleHasSlug(docSnap))
-      );
-      
-      setFilteredArticles(dateFilteredArticles);
-      isDateFilteredRef.current = true;
-      setIsDateFiltered(true);
-    } catch (error) {
-      console.error('Error fetching articles by date:', error);
-      setFilteredArticles([]);
-    }
-  };
+    },
+    [activeTagId, isGsTag, setFilteredArticles, setIsDateFiltered]
+  );
 
   const clearDateFilter = () => {
     const today = new Date();
@@ -674,7 +716,7 @@ const Home = () => {
     };
 
     fetchContent();
-  }, [activeTagId, isGsTag]);
+  }, [activeTagId, isGsTag, fetchArticlesByDate, fetchQuizForDate]);
 
   const heroHeadline = isGsTag
     ? `${activeTagId} Articles & Insights`
@@ -720,7 +762,10 @@ const Home = () => {
                     <div className="section-content">
                       <h3>{todaysQuiz.title || 'Daily Quiz'}</h3>
                       <p className="date">{formatDate(todaysQuiz.date)}</p>
-                      <p>{todaysQuiz.description || 'Test your knowledge with today\'s quiz!'}</p>
+                      {renderRichText(
+                        todaysQuiz?.description,
+                        'Test your knowledge with today\'s quiz!'
+                      )}
                       <Quiz 
                         quiz={todaysQuiz}
                         currentQuestion={currentQuestion}
@@ -1032,6 +1077,7 @@ const Home = () => {
                 </div>
               </div>
             </section>
+            <DownloadAppSection />
           </div>
         </div>
 
@@ -1091,7 +1137,7 @@ const Home = () => {
                             <span className="date">{formatDate(article.date)}</span>
                           </div>
                           <p className="summary">
-                            {article.content ? `${article.content.substring(0, 150)}...` : 'Summary not available.'}
+                            {article.content ? createSnippet(article.content, 150) : 'Summary not available.'}
                           </p>
                         </div>
                       ))
@@ -1102,7 +1148,7 @@ const Home = () => {
                     resolvedLatestUpdates.slice(0, 2).map((update) => {
                       const updateSource = update.source || 'CivicCentre IAS';
                       const updateLink = civicCentrePath(update.link || '/updates');
-                      const updateSnippet = update.content ? `${update.content.substring(0, 150)}...` : 'Details coming soon.';
+                      const updateSnippet = update.content ? createSnippet(update.content, 150) : 'Details coming soon.';
                       const updateCategory = update.category || 'General';
                       const normalizedCategory = updateCategory.toUpperCase();
                       const categoryIsGs = GS_TAGS.includes(normalizedCategory);
@@ -1135,44 +1181,46 @@ const Home = () => {
             </div>
           </section>
 
-          {/* Calendar Section */}
-          <div className="sidebar-section calendar-section">
-            <h3>
-              <CalendarIcon className="inline-block mr-2 h-5 w-5" />
-              Filter Articles by Date
-            </h3>
-            <div className="calendar-wrapper">
-              <DatePicker
-                selected={selectedDate}
-                onChange={handleDateChange}
-                inline
-                calendarClassName="sidebar-calendar"
-                showPopperArrow={false}
-                fixedHeight
-                isClearable
-              />
+          <div className="sidebar-sticky-group">
+            {/* Calendar Section */}
+            <div className="sidebar-section calendar-section">
+              <h3>
+                <CalendarIcon className="inline-block mr-2 h-5 w-5" />
+                Filter Articles by Date
+              </h3>
+              <div className="calendar-wrapper">
+                <DatePicker
+                  selected={selectedDate}
+                  onChange={handleDateChange}
+                  inline
+                  calendarClassName="sidebar-calendar"
+                  showPopperArrow={false}
+                  fixedHeight
+                  isClearable
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Important Links Section */}
-          <div className="sidebar-section">
-            <h3>Recent Articles</h3>
-            <ul className="updates-list sidebar-article-list">
-              {currentAffairs.slice(0, 3).map(article => (
-                <li key={article.id}>
-                  <Link
-                    to={`/current-affairs/${article.slug || article.id}`}
-                    className="sidebar-article-link"
-                  >
-                    {article.title}
-                  </Link>
-                  <small>Posted {formatDate(article.date)}</small>
-                </li>
-              ))}
-            </ul>
-            <Link to="/recent-articles" className="sidebar-cta-link">
-              View All Articles
-            </Link>
+            {/* Important Links Section */}
+            <div className="sidebar-section">
+              <h3>Recent Articles</h3>
+              <ul className="updates-list sidebar-article-list">
+                {currentAffairs.slice(0, 3).map(article => (
+                  <li key={article.id}>
+                    <Link
+                      to={`/current-affairs/${article.slug || article.id}`}
+                      className="sidebar-article-link"
+                    >
+                      {article.title}
+                    </Link>
+                    <small>Posted {formatDate(article.date)}</small>
+                  </li>
+                ))}
+              </ul>
+              <Link to="/recent-articles" className="sidebar-cta-link">
+                View All Articles
+              </Link>
+            </div>
           </div>
         </aside>
       </div>

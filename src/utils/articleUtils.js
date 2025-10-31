@@ -1,5 +1,6 @@
 import { collection, getDocs, query, where, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { civicCentrePath } from '../constants/civicCentre';
 
 export const slugify = (value = '') =>
   value
@@ -82,3 +83,13 @@ export const ensureArticleHasSlug = async (docSnapshot) => {
     date: normalizeFirestoreDate(data.date)
   };
 };
+
+export const getArticleRelativePath = (article = {}) => {
+  const slugOrId = article.slug || article.id;
+  if (!slugOrId) {
+    return '/current-affairs';
+  }
+  return `/current-affairs/${slugOrId}`;
+};
+
+export const getArticlePublicUrl = (article = {}) => civicCentrePath(getArticleRelativePath(article));

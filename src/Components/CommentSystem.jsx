@@ -89,7 +89,7 @@ const CommentSystem = () => {
   useEffect(() => {
     setComments(fallbackComments);
     setLoading(false);
-  }, []);
+  }, [fallbackComments]);
 
   // Initialize sample comments if none exist
   useEffect(() => {

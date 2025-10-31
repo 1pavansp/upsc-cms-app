@@ -41,6 +41,12 @@
   padding-bottom: 0;
 }
 
+.recent-article-primary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
 .recent-articles-list li a {
   font-size: 1.02rem;
   font-weight: 600;
@@ -57,6 +63,54 @@
   font-size: 0.82rem;
   color: #64748b;
   letter-spacing: 0.02em;
+}
+
+.article-share-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.article-share-url {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.45rem;
+  background: rgba(59, 130, 246, 0.1);
+  color: #1d4ed8;
+  font-size: 0.78rem;
+  font-family: 'Roboto Mono', Menlo, Consolas, monospace;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.article-share-url:hover {
+  color: #1e40af;
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.copy-article-link {
+  padding: 0.3rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(37, 99, 235, 0.4);
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.copy-article-link:hover {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(37, 99, 235, 0.6);
+}
+
+.copy-article-link:focus {
+  outline: 2px solid rgba(59, 130, 246, 0.35);
+  outline-offset: 2px;
 }
 
 .recent-articles-page .error-copy {
@@ -103,6 +157,31 @@
 
 .dark .recent-articles-list li span {
   color: var(--text-secondary);
+}
+
+.dark .article-share-row {
+  gap: 0.45rem;
+}
+
+.dark .article-share-url {
+  background: rgba(96, 165, 250, 0.12);
+  color: #60a5fa;
+}
+
+.dark .article-share-url:hover {
+  background: rgba(96, 165, 250, 0.18);
+  color: #93c5fd;
+}
+
+.dark .copy-article-link {
+  background: rgba(96, 165, 250, 0.12);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #bfdbfe;
+}
+
+.dark .copy-article-link:hover {
+  background: rgba(96, 165, 250, 0.2);
+  border-color: rgba(96, 165, 250, 0.6);
 }
 
 .dark .recent-articles-page .recent-date-filter-info {

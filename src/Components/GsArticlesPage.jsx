@@ -1,6 +1,6 @@
 // src/Components/GsArticlesPage.jsx
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { collection, getDocs, query, where, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -11,9 +11,26 @@ import "react-datepicker/dist/react-datepicker.css";
 import './Home.css'; // Reuse styles from Home
 import './GsArticlesPage.css'; // Import new styles
 import CommentSystem from './CommentSystem';
-import { ensureArticleHasSlug, slugify } from '../utils/articleUtils';
+import { ensureArticleHasSlug, slugify, getArticlePublicUrl, getArticleRelativePath } from '../utils/articleUtils';
 
 const GS_TAGS = ['GS1', 'GS2', 'GS3', 'GS4'];
+
+const getGsVariants = (value = '') => {
+  if (!value) return [];
+  const variants = new Set();
+  variants.add(value);
+  variants.add(value.toUpperCase());
+  variants.add(value.toLowerCase());
+  return Array.from(variants).filter(Boolean);
+};
+
+const normalizeArticleDoc = async (docSnap) => {
+  const article = await ensureArticleHasSlug(docSnap);
+  return {
+    ...article,
+    date: article.date || new Date()
+  };
+};
 
 const GsArticlesPage = () => {
   const { tagId } = useParams();
@@ -23,25 +40,10 @@ const GsArticlesPage = () => {
   const [filteredArticles, setFilteredArticles] = useState([]);
   const [isDateFiltered, setIsDateFiltered] = useState(false);
   const [currentAffairs, setCurrentAffairs] = useState([]);
+  const [copiedArticleId, setCopiedArticleId] = useState(null);
+  const copyTimeoutRef = useRef(null);
 
-  const getGsVariants = (value = '') => {
-    if (!value) return [];
-    const variants = new Set();
-    variants.add(value);
-    variants.add(value.toUpperCase());
-    variants.add(value.toLowerCase());
-    return Array.from(variants).filter(Boolean);
-  };
-
-  const normalizeArticleDoc = async (docSnap) => {
-    const article = await ensureArticleHasSlug(docSnap);
-    return {
-      ...article,
-      date: article.date || new Date()
-    };
-  };
-
-  const fetchArticlesForGs = async (variants, additionalConstraints = []) => {
+  const fetchArticlesForGs = useCallback(async (variants, additionalConstraints = []) => {
     const articlesMap = new Map();
     for (const gsValue of variants) {
       try {
@@ -65,7 +67,7 @@ const GsArticlesPage = () => {
     return Array.from(articlesMap.values()).sort(
       (a, b) => (b.date?.getTime?.() ?? 0) - (a.date?.getTime?.() ?? 0)
     );
-  };
+  }, []);
 
   useEffect(() => {
     const fetchPageData = async () => {
@@ -108,7 +110,7 @@ const GsArticlesPage = () => {
     };
 
     fetchPageData();
-  }, [tagId]);
+  }, [tagId, fetchArticlesForGs]);
 
   const normalizedTagId = tagId ? tagId.toUpperCase() : '';
   const otherGsTags = normalizedTagId ? GS_TAGS.filter(tag => tag !== normalizedTagId) : GS_TAGS;
@@ -180,6 +182,36 @@ const GsArticlesPage = () => {
     setIsDateFiltered(false);
   };
 
+  const handleCopyLink = useCallback(async (article) => {
+    const shareUrl = getArticlePublicUrl(article);
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopiedArticleId(article.id);
+        if (copyTimeoutRef.current) {
+          clearTimeout(copyTimeoutRef.current);
+        }
+        copyTimeoutRef.current = setTimeout(() => {
+          setCopiedArticleId(null);
+          copyTimeoutRef.current = null;
+        }, 2000);
+      } else {
+        throw new Error('Clipboard API unavailable');
+      }
+    } catch (err) {
+      console.error('Failed to copy GS article link:', err);
+      window.prompt('Press Ctrl+C to copy this article link:', shareUrl);
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <main className="main-content gs-articles-page">
       <div className="page-layout">
@@ -197,27 +229,52 @@ const GsArticlesPage = () => {
                   <p>Loading articles...</p>
                 ) : articlesToDisplay.length > 0 ? (
                   <ul className="article-list">
-                    {articlesToDisplay.map(article => (
-                      <li key={article.id}>
-                        <Link to={`/current-affairs/${article.slug || article.id}`}>
-                          <h4>{article.title}</h4>
-                        </Link>
-                        {Array.isArray(article.domains?.subjects) && article.domains.subjects.length > 0 && (
-                          <div className="article-subject-tags">
-                            {article.domains.subjects.map(subject => (
-                              <Link
-                                key={subject}
-                                className="subject-chip"
-                                to={`/gs/${normalizedTagId.toLowerCase()}/${slugify(subject)}`}
-                              >
-                                {subject}
-                              </Link>
-                            ))}
+                    {articlesToDisplay.map(article => {
+                      const articlePath = getArticleRelativePath(article);
+                      const publicUrl = getArticlePublicUrl(article);
+                      const isCopied = copiedArticleId === article.id;
+
+                      return (
+                        <li key={article.id}>
+                          <div className="gs-article-primary">
+                            <Link to={articlePath}>
+                              <h4>{article.title}</h4>
+                            </Link>
+                            {Array.isArray(article.domains?.subjects) && article.domains.subjects.length > 0 && (
+                              <div className="article-subject-tags">
+                                {article.domains.subjects.map(subject => (
+                                  <Link
+                                    key={subject}
+                                    className="subject-chip"
+                                    to={`/gs/${normalizedTagId.toLowerCase()}/${slugify(subject)}`}
+                                  >
+                                    {subject}
+                                  </Link>
+                                ))}
+                              </div>
+                            )}
+                            <small>{formatDate(article.date)}</small>
                           </div>
-                        )}
-                        <small>{formatDate(article.date)}</small>
-                      </li>
-                    ))}
+                          <div className="article-share-row">
+                            <a
+                              href={publicUrl}
+                              className="article-share-url"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {publicUrl}
+                            </a>
+                            <button
+                              type="button"
+                              className="copy-article-link"
+                              onClick={() => handleCopyLink(article)}
+                            >
+                              {isCopied ? 'Copied!' : 'Copy link'}
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
                 ) : (
                   <p>No articles found for {normalizedTagId || 'GS'}.</p>
@@ -242,14 +299,39 @@ const GsArticlesPage = () => {
                           </Link>
                         </div>
                         <ul className="subject-group-list">
-                          {subjectArticles.map(article => (
-                            <li key={article.id}>
-                              <Link to={`/current-affairs/${article.slug || article.id}`}>
-                                {article.title}
-                              </Link>
-                              <span>{formatDate(article.date)}</span>
-                            </li>
-                          ))}
+                          {subjectArticles.map(article => {
+                            const articlePath = getArticleRelativePath(article);
+                            const publicUrl = getArticlePublicUrl(article);
+                            const isCopied = copiedArticleId === article.id;
+
+                            return (
+                              <li key={article.id}>
+                                <div className="subject-article-primary">
+                                  <Link to={articlePath}>
+                                    {article.title}
+                                  </Link>
+                                  <span>{formatDate(article.date)}</span>
+                                </div>
+                                <div className="article-share-row">
+                                  <a
+                                    href={publicUrl}
+                                    className="article-share-url"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    {publicUrl}
+                                  </a>
+                                  <button
+                                    type="button"
+                                    className="copy-article-link"
+                                    onClick={() => handleCopyLink(article)}
+                                  >
+                                    {isCopied ? 'Copied!' : 'Copy link'}
+                                  </button>
+                                </div>
+                              </li>
+                            );
+                          })}
                         </ul>
                       </div>
                     ))}
@@ -305,17 +387,42 @@ const GsArticlesPage = () => {
           <div className="sidebar-section">
             <h3>Recent Articles</h3>
             <ul className="updates-list">
-              {currentAffairs.map(article => (
-                <li key={article.id}>
-                  <Link
-                    to={`/current-affairs/${article.slug || article.id}`}
-                    className="sidebar-article-link"
-                  >
-                    {article.title}
-                  </Link>
-                  <small>Posted {formatDate(article.date)}</small>
-                </li>
-              ))}
+              {currentAffairs.map(article => {
+                const articlePath = getArticleRelativePath(article);
+                const publicUrl = getArticlePublicUrl(article);
+                const isCopied = copiedArticleId === article.id;
+
+                return (
+                  <li key={article.id}>
+                    <div className="sidebar-article-primary">
+                      <Link
+                        to={articlePath}
+                        className="sidebar-article-link"
+                      >
+                        {article.title}
+                      </Link>
+                      <small>Posted {formatDate(article.date)}</small>
+                    </div>
+                    <div className="article-share-row">
+                      <a
+                        href={publicUrl}
+                        className="article-share-url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {publicUrl}
+                      </a>
+                      <button
+                        type="button"
+                        className="copy-article-link"
+                        onClick={() => handleCopyLink(article)}
+                      >
+                        {isCopied ? 'Copied!' : 'Copy link'}
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
             <Link to="/recent-articles" className="sidebar-cta-link">
               View All Articles

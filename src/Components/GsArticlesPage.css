@@ -19,6 +19,9 @@
 .article-list li {
   padding: 1rem 0;
   border-bottom: 1px solid var(--border-card);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
 }
 
 .article-list li:last-child {
@@ -54,6 +57,90 @@
 
 .dark .article-list small {
   color: rgba(148, 163, 184, 0.82);
+}
+
+.gs-article-primary,
+.subject-article-primary,
+.sidebar-article-primary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.gs-articles-page .updates-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.article-share-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.article-share-url {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.45rem;
+  background: rgba(59, 130, 246, 0.1);
+  color: #1d4ed8;
+  font-size: 0.78rem;
+  font-family: 'Roboto Mono', Menlo, Consolas, monospace;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.article-share-url:hover {
+  color: #1e40af;
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.copy-article-link {
+  padding: 0.3rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(37, 99, 235, 0.4);
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.copy-article-link:hover {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(37, 99, 235, 0.6);
+}
+
+.copy-article-link:focus {
+  outline: 2px solid rgba(59, 130, 246, 0.35);
+  outline-offset: 2px;
+}
+
+.dark .article-share-url {
+  background: rgba(96, 165, 250, 0.12);
+  color: #60a5fa;
+}
+
+.dark .article-share-url:hover {
+  background: rgba(96, 165, 250, 0.18);
+  color: #93c5fd;
+}
+
+.dark .copy-article-link {
+  background: rgba(96, 165, 250, 0.12);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #bfdbfe;
+}
+
+.dark .copy-article-link:hover {
+  background: rgba(96, 165, 250, 0.2);
+  border-color: rgba(96, 165, 250, 0.6);
 }
 
 .article-subject-tags {

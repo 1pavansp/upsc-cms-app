@@ -156,7 +156,10 @@ const Quiz = ({
   return (
     <div className="quiz-content">
       <h4>Question {currentQuestion + 1} of {totalQuestions}</h4>
-      <p className="question-text">{question.question}</p>
+      <div
+        className="question-text"
+        dangerouslySetInnerHTML={{ __html: question.question || '' }}
+      />
       <ul className="quiz-options">
         {question.options.map((option, idx) => {
           const isSelected = selectionForCurrent === idx;
@@ -211,6 +214,12 @@ const Quiz = ({
                 <span>{hasResolvableAnswer ? derivedAnswerText : 'Answer key not provided'}</span>
               </p>
             </>
+          )}
+          {question.explanation && (
+            <div
+              className="quiz-explanation"
+              dangerouslySetInnerHTML={{ __html: question.explanation }}
+            />
           )}
         </div>
       )}
