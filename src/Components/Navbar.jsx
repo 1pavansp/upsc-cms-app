@@ -33,7 +33,7 @@ const Navbar = () => {
     <header className="navbar">
       <div className="navbar-container">
         <a href={`${EXAM_OTT_BASE_URL}/`} className="navbar-brand">
-          <img src="/assets/logo.svg" alt="ExamOTT logo" />
+          <img src="/assets/logo.png" alt="ExamOTT logo" />
           <span></span>
         </a>
 
@@ -99,7 +99,7 @@ const Navbar = () => {
             role="menu"
           >
             <div className="navbar-brand">
-              <img src="/assets/logo.svg" alt="ExamOTT logo" />
+              <img src="/assets/logo.png" alt="ExamOTT logo" />
               <span>CivicCentre IAS</span>
             </div>
 
