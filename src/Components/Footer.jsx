@@ -1,77 +1,66 @@
 import React, { useState } from 'react';
-import Swal from 'sweetalert2';
-import { useNavigate } from 'react-router-dom';
 import {
   Apple,
   ChevronDown,
   ChevronUp,
   Facebook as FacebookIcon,
-  Globe,
   Instagram as InstagramIcon,
   Play,
   Youtube as YoutubeIcon,
 } from 'lucide-react';
 import './Footer.css';
 
+const EXTERNAL_BASE_URL = 'https://www.examottcc.in';
+
 const FooterSection = () => {
-  const navigate = useNavigate();
   const [openSection, setOpenSection] = useState(null);
 
   const toggleSection = (section) => {
     setOpenSection((current) => (current === section ? null : section));
   };
 
-  const handleCompanyPopup = async (title) => {
-    await Swal.fire({
-      title: `${title} page coming soon`,
-      html: `
-        <div style="text-align:left;line-height:1.6">
-          <strong>CivicCentre IAS</strong><br/>
-          Location: Ashok Nagar, Hyderabad<br/>
-          Phone: 70134 95019 (Hyd) | 79955 49537 (Vizag)<br/>
-          Email: civiccentre.in@gmail.com<br/><br/>
-          <em>India's leading institute for UPSC, TSPSC, and APPSC</em>
-        </div>
-      `,
-      icon: 'info',
-      confirmButtonText: 'Okay',
-      confirmButtonColor: '#126ED6',
-      backdrop: 'rgba(0,0,0,0.4)',
-    });
-  };
-
   const sections = [
     {
       title: 'Company',
-      items: ['About Us', 'Contact Us', 'Careers', 'Updates'],
-      onClick: (item) => handleCompanyPopup(item),
+      items: [
+        { label: 'About Us', href: `${EXTERNAL_BASE_URL}/#why-civic-centre` },
+        { label: 'Contact Us', href: `${EXTERNAL_BASE_URL}/#cta` },
+        { label: 'Careers', href: `${EXTERNAL_BASE_URL}/#team` },
+        { label: 'Updates', href: `${EXTERNAL_BASE_URL}/#announce` },
+      ],
     },
     {
       title: 'Exams',
-      items: ['UPSC', 'TGPSC', 'APSC'],
-      onClick: (goal) => navigate(`/courses?goal=${goal}`),
+      items: [
+        { label: 'UPSC', href: `${EXTERNAL_BASE_URL}/#popular-courses` },
+        { label: 'TSPSC', href: `${EXTERNAL_BASE_URL}/#popular-courses` },
+        { label: 'APPSC', href: `${EXTERNAL_BASE_URL}/#popular-courses` },
+      ],
     },
     {
       title: 'Popular Courses',
-      items: ['Classes', 'Tests', 'Materials', 'Career Guide'],
+      items: [
+        { label: 'Classes', href: `${EXTERNAL_BASE_URL}/#popular-courses` },
+        { label: 'Tests', href: `${EXTERNAL_BASE_URL}/#popular-courses` },
+        { label: 'Materials', href: `${EXTERNAL_BASE_URL}/#materials` },
+        { label: 'Career Guide', href: `${EXTERNAL_BASE_URL}/#cta` },
+      ],
     },
     {
       title: 'Downloads',
-      items: ['PYQs', 'Current Affairs'],
+      items: [
+        { label: 'PYQs', href: `${EXTERNAL_BASE_URL}/#free-library` },
+        { label: 'Current Affairs', href: `${EXTERNAL_BASE_URL}/#free-library` },
+      ],
     },
     {
       title: 'Connect With Us',
       items: [
-        '70134 95019 (Hyd)',
-        '79955 49537 (Vizag)',
-        'civiccentre.in@gmail.com',
-        'Live Chat',
+        { label: '70134 95019 (Hyd)', href: 'tel:7013495019' },
+        { label: '79955 49537 (Vizag)', href: 'tel:7995549537' },
+        { label: 'civiccentre.in@gmail.com', href: 'mailto:civiccentre.in@gmail.com' },
+        { label: 'Live Chat', href: `${EXTERNAL_BASE_URL}/#cta` },
       ],
-      onClick: (value) => {
-        if (value === 'Live Chat') {
-          Swal.fire('Chat feature coming soon', '', 'info');
-        }
-      },
     },
   ];
 
@@ -96,13 +85,13 @@ const FooterSection = () => {
   const storeBadges = [
     {
       label: 'Google Play',
-      href: '#',
+      href: 'https://play.google.com/store/apps/details?id=com.civiccentreias',
       icon: Play,
       lines: ['Get it on', 'Google Play'],
     },
     {
       label: 'App Store',
-      href: '#',
+      href: 'https://apps.apple.com/in/app/civiccentreias',
       icon: Apple,
       lines: ['Download on the', 'App Store'],
     },
@@ -116,17 +105,20 @@ const FooterSection = () => {
             <div key={section.title} className="footer-desktop-column">
               <h3 className="footer-heading">{section.title}</h3>
               <ul className="footer-list">
-                {section.items.map((item) => (
-                  <li key={item}>
-                    <button
-                      type="button"
-                      className="footer-link"
-                      onClick={() => section.onClick?.(item)}
-                    >
-                      {item}
-                    </button>
-                  </li>
-                ))}
+                {section.items.map((item) => {
+                  const isExternal = item.href.startsWith('http');
+                  return (
+                    <li key={item.label}>
+                      <a
+                        className="footer-link"
+                        href={item.href}
+                        {...(isExternal ? { target: '_blank', rel: 'noreferrer' } : {})}
+                      >
+                        {item.label}
+                      </a>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}
@@ -149,17 +141,20 @@ const FooterSection = () => {
               </button>
               {openSection === section.title && (
                 <ul className="footer-accordion-list">
-                  {section.items.map((item) => (
-                    <li key={item}>
-                      <button
-                        type="button"
-                        className="footer-link"
-                        onClick={() => section.onClick?.(item)}
-                      >
-                        {item}
-                      </button>
-                    </li>
-                  ))}
+                  {section.items.map((item) => {
+                    const isExternal = item.href.startsWith('http');
+                    return (
+                      <li key={item.label}>
+                        <a
+                          className="footer-link"
+                          href={item.href}
+                          {...(isExternal ? { target: '_blank', rel: 'noreferrer' } : {})}
+                        >
+                          {item.label}
+                        </a>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
@@ -173,7 +168,7 @@ const FooterSection = () => {
               <li>
                 <a
                   className="footer-link"
-                  href="https://civiccentre.in"
+                  href={`${EXTERNAL_BASE_URL}/`}
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -270,6 +265,8 @@ const FooterSection = () => {
                 key={badge.label}
                 className="footer-app-button"
                 href={badge.href}
+                target="_blank"
+                rel="noreferrer"
               >
                 {React.createElement(badge.icon, { size: 18 })}
                 <span className="footer-app-text">

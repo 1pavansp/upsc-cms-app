@@ -50,7 +50,7 @@ const FALLBACK_LATEST_UPDATES = [
     category: 'UPSC',
     date: new Date(),
     source: 'CivicCentre IAS',
-    link: '/updates'
+    link: '/#announce'
   },
   {
     id: 'placeholder-2',
@@ -59,7 +59,7 @@ const FALLBACK_LATEST_UPDATES = [
     category: 'UPSC',
     date: new Date(),
     source: 'CivicCentre IAS',
-    link: '/updates'
+    link: '/#announce'
   },
   {
     id: 'placeholder-3',
@@ -68,7 +68,7 @@ const FALLBACK_LATEST_UPDATES = [
     category: 'UPSC',
     date: new Date(),
     source: 'CivicCentre IAS',
-    link: '/updates'
+    link: '/#announce'
   }
 ];
 
@@ -119,21 +119,21 @@ const Home = () => {
       id: 'py-2023-prelims',
       title: '2023 Prelims Paper',
       description: 'Download and analyze the latest prelims paper.',
-      link: civicCentrePath('/previous-year-papers'),
+      link: civicCentrePath('/#free-library'),
       cta: 'Download'
     },
     {
       id: 'py-2022-mains-gs1',
       title: '2022 Mains GS Paper I',
       description: 'Review the Mains General Studies Paper I from 2022.',
-      link: civicCentrePath('/previous-year-papers'),
+      link: civicCentrePath('/#free-library'),
       cta: 'Download'
     },
     {
       id: 'py-2021-essay',
       title: '2021 Essay Paper',
       description: 'Practice writing with the essay topics from 2021.',
-      link: civicCentrePath('/previous-year-papers'),
+      link: civicCentrePath('/#free-library'),
       cta: 'Download'
     }
   ];
@@ -143,21 +143,21 @@ const Home = () => {
       id: 'pub-2025-sept',
       title: 'Magazine - September 2025',
       description: 'Comprehensive analysis of current affairs and exam-oriented articles.',
-      link: civicCentrePath('/magazines'),
+      link: civicCentrePath('/#free-library'),
       cta: 'Read Now'
     },
     {
       id: 'pub-2025-aug',
       title: 'Magazine - August 2025',
       description: 'In-depth coverage of national and international events.',
-      link: civicCentrePath('/magazines'),
+      link: civicCentrePath('/#free-library'),
       cta: 'Read Now'
     },
     {
       id: 'pub-success-stories',
       title: 'UPSC Success Stories - Vol. 3',
       description: 'Inspiring journeys of successful IAS candidates.',
-      link: civicCentrePath('/magazines'),
+      link: civicCentrePath('/#free-library'),
       cta: 'View'
     }
   ];
@@ -1033,7 +1033,7 @@ const Home = () => {
                   </ul>
                   <a
                     className="subscribe-button"
-                    href={civicCentrePath('/subscriptions#basic')}
+                    href={civicCentrePath('/#popular-courses')}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -1051,7 +1051,7 @@ const Home = () => {
                   </ul>
                   <a
                     className="subscribe-button"
-                    href={civicCentrePath('/subscriptions#premium')}
+                    href={civicCentrePath('/#academy-excellence')}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -1068,7 +1068,7 @@ const Home = () => {
                   </ul>
                   <a
                     className="subscribe-button"
-                    href={civicCentrePath('/subscriptions#annual')}
+                    href={civicCentrePath('/#cta')}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -1147,7 +1147,7 @@ const Home = () => {
                     ) : (
                     resolvedLatestUpdates.slice(0, 2).map((update) => {
                       const updateSource = update.source || 'CivicCentre IAS';
-                      const updateLink = civicCentrePath(update.link || '/updates');
+                      const updateLink = civicCentrePath(update.link || '/#announce');
                       const updateSnippet = update.content ? createSnippet(update.content, 150) : 'Details coming soon.';
                       const updateCategory = update.category || 'General';
                       const normalizedCategory = updateCategory.toUpperCase();

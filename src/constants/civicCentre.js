@@ -1,4 +1,4 @@
-export const CIVIC_CENTRE_BASE_URL = 'https://www.civiccentre.in';
+export const CIVIC_CENTRE_BASE_URL = 'https://www.examottcc.in';
 
 export const civicCentrePath = (path = '') => {
   if (!path) {

@@ -1,21 +1,22 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Menu, X, ChevronDown, ChevronUp } from 'lucide-react';
 import './Navbar.css';
 
+const EXAM_OTT_BASE_URL = 'https://www.examottcc.in';
+
 const PRIMARY_LINKS = [
-  { label: 'UPSC', href: '#courses' },
-  { label: 'TSPSC', href: '#courses' },
-  { label: 'APPSC', href: '#courses' },
-  { label: 'Materials', href: '#materials' },
-  { label: 'Scholarship Tests', href: '#batches' },
-  { label: 'ExamOTT', href: '#courses' }
+  { label: 'UPSC', href: `${EXAM_OTT_BASE_URL}/#popular-courses` },
+  { label: 'TSPSC', href: `${EXAM_OTT_BASE_URL}/#popular-courses` },
+  { label: 'APPSC', href: `${EXAM_OTT_BASE_URL}/#popular-courses` },
+  { label: 'Materials', href: `${EXAM_OTT_BASE_URL}/#materials` },
+  { label: 'Scholarship Tests', href: `${EXAM_OTT_BASE_URL}/#goals` },
+  { label: 'ExamOTT', href: `${EXAM_OTT_BASE_URL}/#cta` }
 ];
 
 const MORE_LINKS = [
-  { label: 'Action', href: '#action3' },
-  { label: 'Another action', href: '#action4' },
-  { label: 'Something else here', href: '#action5' }
+  { label: 'Testimonials', href: `${EXAM_OTT_BASE_URL}/#testimonials` },
+  { label: 'Why Civic Centre', href: `${EXAM_OTT_BASE_URL}/#why-civic-centre` },
+  { label: 'Our Team', href: `${EXAM_OTT_BASE_URL}/#team` }
 ];
 
 const Navbar = () => {
@@ -31,10 +32,10 @@ const Navbar = () => {
   return (
     <header className="navbar">
       <div className="navbar-container">
-        <Link to="/" className="navbar-brand">
+        <a href={`${EXAM_OTT_BASE_URL}/`} className="navbar-brand">
           <img src="/assets/logo.svg" alt="ExamOTT logo" />
           <span></span>
-        </Link>
+        </a>
 
         <nav
           className="navbar-menu"
@@ -75,11 +76,9 @@ const Navbar = () => {
         </nav>
 
         <div className="navbar-actions">
-          <Link to="/admin/login">
-            <button type="button" className="navbar-button">
-              Login
-            </button>
-          </Link>
+          <a href={`${EXAM_OTT_BASE_URL}/dashboard`} className="navbar-button">
+            Login
+          </a>
         </div>
 
         <button
@@ -144,11 +143,13 @@ const Navbar = () => {
               )}
             </div>
 
-            <Link to="/admin/login" onClick={closeMobileNav}>
-              <button type="button" className="navbar-mobile-button">
-                Login
-              </button>
-            </Link>
+            <a
+              href={`${EXAM_OTT_BASE_URL}/dashboard`}
+              className="navbar-mobile-button"
+              onClick={closeMobileNav}
+            >
+              Login
+            </a>
           </div>
         </div>
       )}
