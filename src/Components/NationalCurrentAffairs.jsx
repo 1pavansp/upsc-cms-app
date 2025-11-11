@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { ArrowRight } from 'lucide-react';
 import { db } from '../firebase';
@@ -10,31 +10,7 @@ import './Home.css';
 import './RecentArticlesPage.css';
 import './StateArticlesPage.css';
 
-const STATE_CONFIGS = {
-  telangana: {
-    label: 'Telangana',
-    description:
-      'Follow state-specific current affairs, governance updates, and exam-oriented analysis from Telangana.',
-    category: 'Telangana',
-    matchers: ['telangana']
-  },
-  'andhra-pradesh': {
-    label: 'Andhra Pradesh',
-    description:
-      'Track developments, schemes, and relevant headlines from Andhra Pradesh to strengthen your regional preparation.',
-    category: 'Andhra Pradesh',
-    matchers: ['andhra pradesh', 'andhra-pradesh', 'andhra']
-  }
-};
-
-const normalizeValue = (value = '') =>
-  value?.toString().trim().toLowerCase();
-
-const StateArticlesPage = () => {
-  const { stateId } = useParams();
-  const stateKey = normalizeValue(stateId);
-  const stateConfig = STATE_CONFIGS[stateKey];
-
+const NationalCurrentAffairs = () => {
   const [articles, setArticles] = useState([]);
   const [filteredArticles, setFilteredArticles] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -46,28 +22,19 @@ const StateArticlesPage = () => {
     setSelectedDate(null);
     setFilteredArticles([]);
     setIsDateFiltered(false);
-  }, [stateConfig]);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
 
     const fetchArticles = async () => {
-      if (!stateConfig) {
-        if (isMounted) {
-          setArticles([]);
-          setFilteredArticles([]);
-          setLoading(false);
-        }
-        return;
-      }
-
       setLoading(true);
       setError(null);
 
       try {
         const articlesQuery = query(
           collection(db, 'current-affairs'),
-          where('category', '==', stateConfig.category)
+          where('category', '==', 'National')
         );
         const snapshot = await getDocs(articlesQuery);
 
@@ -82,9 +49,6 @@ const StateArticlesPage = () => {
             category: article.category || '',
             summary: article.summary || ''
           }))
-          .filter((article) =>
-            stateConfig.matchers.includes(normalizeValue(article.category))
-          )
           .sort((a, b) => b.date - a.date);
 
         if (isMounted) {
@@ -92,10 +56,10 @@ const StateArticlesPage = () => {
           setFilteredArticles([]);
         }
       } catch (err) {
-        console.error('Error fetching state articles:', err);
+        console.error('Error fetching national articles:', err);
         if (isMounted) {
           setError(
-            'Unable to load the latest articles for this state right now. Please try again soon.'
+            'Unable to load the latest national articles right now. Please try again soon.'
           );
           setArticles([]);
           setFilteredArticles([]);
@@ -112,7 +76,7 @@ const StateArticlesPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [stateConfig]);
+  }, []);
 
   const articlesToDisplay = useMemo(
     () => (isDateFiltered ? filteredArticles : articles),
@@ -147,26 +111,6 @@ const StateArticlesPage = () => {
     setIsDateFiltered(false);
   };
 
-  if (!stateConfig) {
-    return (
-      <main className="main-content state-articles-page missing-state">
-        <div className="state-page-empty">
-          <div className="section-card">
-            <h2>State Not Found</h2>
-            <p>
-              We couldn&apos;t find a current affairs section for this state yet.
-              Head back to the{' '}
-              <Link to="/" className="inline-link">
-                home page
-              </Link>{' '}
-              to explore other resources.
-            </p>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
   return (
     <main className="main-content recent-articles-page state-articles-page">
       <div className="page-layout">
@@ -174,22 +118,10 @@ const StateArticlesPage = () => {
           <div className="main-content-wrapper">
             <section className="content-section">
               <div className="section-card state-articles-lede">
-                <h2>{stateConfig.label} Current Affairs</h2>
-                <p className="section-lede">{stateConfig.description}</p>
-                <div className="state-switcher">
-                  {Object.entries(STATE_CONFIGS).map(([key, config]) => (
-                    <Link
-                      key={key}
-                      className={`state-pill ${
-                        key === stateKey ? 'active' : ''
-                      }`}
-                      to={`/state/${key}`}
-                    >
-                      {config.label}
-                      {key === stateKey && <ArrowRight size={16} />}
-                    </Link>
-                  ))}
-                </div>
+                <h2>National Current Affairs</h2>
+                <p className="section-lede">
+                  Stay updated with the latest national events, policies, and issues relevant to the UPSC examination.
+                </p>
                 {isDateFiltered && selectedDate && (
                   <p className="recent-date-filter-info">
                     Showing articles published on {formatDate(selectedDate)}
@@ -200,7 +132,7 @@ const StateArticlesPage = () => {
 
             <section className="content-section">
               <div className="section-card">
-                <h3>Latest from {stateConfig.label}</h3>
+                <h3>Latest from National Affairs</h3>
                 {loading ? (
                   <p>Loading articles...</p>
                 ) : error ? (
@@ -220,7 +152,7 @@ const StateArticlesPage = () => {
                   <p>
                     {isDateFiltered
                       ? 'No articles were published on the selected date.'
-                      : `We haven't published ${stateConfig.label} updates yet. Check back soon!`}
+                      : 'We haven\'t published National updates yet. Check back soon!'}
                   </p>
                 )}
               </div>
@@ -251,7 +183,7 @@ const StateArticlesPage = () => {
               </ul>
             ) : (
               <p className="empty-sidebar-copy">
-                Fresh stories for {stateConfig.label} will appear here soon.
+                Fresh stories for National Affairs will appear here soon.
               </p>
             )}
           </div>
@@ -261,4 +193,4 @@ const StateArticlesPage = () => {
   );
 };
 
-export default StateArticlesPage;
+export default NationalCurrentAffairs;

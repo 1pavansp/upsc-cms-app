@@ -1,17 +1,15 @@
 // src/Components/GsArticlesPage.jsx
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { collection, getDocs, query, where, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { formatDate, getDateRange } from '../utils/dateUtils';
-import { ArrowRight, Calendar as CalendarIcon } from 'lucide-react';
-import DatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css";
+import { ArrowRight } from 'lucide-react';
 import './Home.css'; // Reuse styles from Home
 import './GsArticlesPage.css'; // Import new styles
 import CommentSystem from './CommentSystem';
-import { ensureArticleHasSlug, slugify, getArticlePublicUrl, getArticleRelativePath } from '../utils/articleUtils';
+import { ensureArticleHasSlug, slugify, getArticleRelativePath } from '../utils/articleUtils';
 
 const GS_TAGS = ['GS1', 'GS2', 'GS3', 'GS4'];
 
@@ -40,8 +38,6 @@ const GsArticlesPage = () => {
   const [filteredArticles, setFilteredArticles] = useState([]);
   const [isDateFiltered, setIsDateFiltered] = useState(false);
   const [currentAffairs, setCurrentAffairs] = useState([]);
-  const [copiedArticleId, setCopiedArticleId] = useState(null);
-  const copyTimeoutRef = useRef(null);
 
   const fetchArticlesForGs = useCallback(async (variants, additionalConstraints = []) => {
     const articlesMap = new Map();
@@ -166,7 +162,7 @@ const GsArticlesPage = () => {
     }
   };
 
-  const handleDateChange = (date) => {
+  const _handleDateChange = (date) => {
     setSelectedDate(date);
     if (date) {
       fetchArticlesByDate(date);
@@ -176,50 +172,21 @@ const GsArticlesPage = () => {
     }
   };
 
-  const clearDateFilter = () => {
+  const _clearDateFilter = () => {
     setSelectedDate(null);
     setFilteredArticles([]);
     setIsDateFiltered(false);
   };
-
-  const handleCopyLink = useCallback(async (article) => {
-    const shareUrl = getArticlePublicUrl(article);
-    try {
-      if (navigator?.clipboard?.writeText) {
-        await navigator.clipboard.writeText(shareUrl);
-        setCopiedArticleId(article.id);
-        if (copyTimeoutRef.current) {
-          clearTimeout(copyTimeoutRef.current);
-        }
-        copyTimeoutRef.current = setTimeout(() => {
-          setCopiedArticleId(null);
-          copyTimeoutRef.current = null;
-        }, 2000);
-      } else {
-        throw new Error('Clipboard API unavailable');
-      }
-    } catch (err) {
-      console.error('Failed to copy GS article link:', err);
-      window.prompt('Press Ctrl+C to copy this article link:', shareUrl);
-    }
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (copyTimeoutRef.current) {
-        clearTimeout(copyTimeoutRef.current);
-      }
-    };
-  }, []);
 
   return (
     <main className="main-content gs-articles-page">
       <div className="page-layout">
         <div className="main-column">
           <div className="main-content-wrapper">
+            <h2>GS{tagId}</h2>
             <section className="content-section">
               <div className="section-card">
-                <h2>{normalizedTagId || 'GS'} Articles</h2>
+                <h2>{normalizedTagId} Articles</h2>
                 {isDateFiltered && selectedDate && (
                   <p className="date-filter-info">
                     Showing articles for {formatDate(selectedDate)}
@@ -231,9 +198,6 @@ const GsArticlesPage = () => {
                   <ul className="article-list">
                     {articlesToDisplay.map(article => {
                       const articlePath = getArticleRelativePath(article);
-                      const publicUrl = getArticlePublicUrl(article);
-                      const isCopied = copiedArticleId === article.id;
-
                       return (
                         <li key={article.id}>
                           <div className="gs-article-primary">
@@ -255,29 +219,12 @@ const GsArticlesPage = () => {
                             )}
                             <small>{formatDate(article.date)}</small>
                           </div>
-                          <div className="article-share-row">
-                            <a
-                              href={publicUrl}
-                              className="article-share-url"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              {publicUrl}
-                            </a>
-                            <button
-                              type="button"
-                              className="copy-article-link"
-                              onClick={() => handleCopyLink(article)}
-                            >
-                              {isCopied ? 'Copied!' : 'Copy link'}
-                            </button>
-                          </div>
                         </li>
                       );
                     })}
                   </ul>
                 ) : (
-                  <p>No articles found for {normalizedTagId || 'GS'}.</p>
+                  <p>No articles found for {normalizedTagId}.</p>
                 )}
               </div>
             </section>
@@ -301,9 +248,6 @@ const GsArticlesPage = () => {
                         <ul className="subject-group-list">
                           {subjectArticles.map(article => {
                             const articlePath = getArticleRelativePath(article);
-                            const publicUrl = getArticlePublicUrl(article);
-                            const isCopied = copiedArticleId === article.id;
-
                             return (
                               <li key={article.id}>
                                 <div className="subject-article-primary">
@@ -311,23 +255,6 @@ const GsArticlesPage = () => {
                                     {article.title}
                                   </Link>
                                   <span>{formatDate(article.date)}</span>
-                                </div>
-                                <div className="article-share-row">
-                                  <a
-                                    href={publicUrl}
-                                    className="article-share-url"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    {publicUrl}
-                                  </a>
-                                  <button
-                                    type="button"
-                                    className="copy-article-link"
-                                    onClick={() => handleCopyLink(article)}
-                                  >
-                                    {isCopied ? 'Copied!' : 'Copy link'}
-                                  </button>
                                 </div>
                               </li>
                             );
@@ -359,39 +286,11 @@ const GsArticlesPage = () => {
           </div>
         </div>
         <aside className="sidebar">
-          <div className="sidebar-section calendar-section">
-            <h3>
-              <CalendarIcon className="inline-block mr-2 h-5 w-5" />
-              Filter Articles by Date
-            </h3>
-            <div className="calendar-wrapper">
-              <DatePicker
-                selected={selectedDate}
-                onChange={handleDateChange}
-                inline
-                calendarClassName="sidebar-calendar"
-                showPopperArrow={false}
-                fixedHeight
-                isClearable
-              />
-              {isDateFiltered && (
-                <div className="date-filter-actions">
-                  <button type="button" className="date-filter-reset" onClick={clearDateFilter}>
-                    Clear filter
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
           <div className="sidebar-section">
             <h3>Recent Articles</h3>
             <ul className="updates-list">
               {currentAffairs.map(article => {
                 const articlePath = getArticleRelativePath(article);
-                const publicUrl = getArticlePublicUrl(article);
-                const isCopied = copiedArticleId === article.id;
-
                 return (
                   <li key={article.id}>
                     <div className="sidebar-article-primary">
@@ -402,23 +301,6 @@ const GsArticlesPage = () => {
                         {article.title}
                       </Link>
                       <small>Posted {formatDate(article.date)}</small>
-                    </div>
-                    <div className="article-share-row">
-                      <a
-                        href={publicUrl}
-                        className="article-share-url"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {publicUrl}
-                      </a>
-                      <button
-                        type="button"
-                        className="copy-article-link"
-                        onClick={() => handleCopyLink(article)}
-                      >
-                        {isCopied ? 'Copied!' : 'Copy link'}
-                      </button>
                     </div>
                   </li>
                 );

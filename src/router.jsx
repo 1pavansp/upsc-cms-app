@@ -9,6 +9,8 @@ import GsArticlesPage from './Components/GsArticlesPage';
 import SubjectArticlesPage from './Components/SubjectArticlesPage';
 import RecentArticlesPage from './Components/RecentArticlesPage';
 import StateArticlesPage from './Components/StateArticlesPage';
+import InternationalCurrentAffairs from './Components/InternationalCurrentAffairs';
+import NationalCurrentAffairs from './Components/NationalCurrentAffairs';
 
 export const router = createBrowserRouter([
   {
@@ -42,6 +44,22 @@ export const router = createBrowserRouter([
       {
         path: "state/:stateId",
         element: <StateArticlesPage />
+      },
+      {
+          path: "international-current-affairs",
+          element: <InternationalCurrentAffairs />
+      },
+          {
+            path: "current-affairs/international",
+            element: <InternationalCurrentAffairs />
+          },
+      {
+          path: "national-current-affairs",
+          element: <NationalCurrentAffairs />
+        },
+          {
+            path: "current-affairs/national",
+            element: <NationalCurrentAffairs />
       },
       {
         path: "recent-articles",

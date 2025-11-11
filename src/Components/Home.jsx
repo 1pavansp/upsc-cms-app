@@ -1,7 +1,7 @@
 // src/components/Home.jsx
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { collection, getDocs, query, orderBy, limit, where, Timestamp, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ArrowRight, Calendar as CalendarIcon } from 'lucide-react';
 import DatePicker from 'react-datepicker';
@@ -9,7 +9,6 @@ import "react-datepicker/dist/react-datepicker.css";
 import { db } from '../firebase';
 import { formatDate, getDateRange } from '../utils/dateUtils';
 import { ensureArticleHasSlug } from '../utils/articleUtils';
-import { createSnippet } from '../utils/textUtils';
 import Quiz from './Quiz';
 import CommentSystem from './CommentSystem';
 import PrimetimeVideos from './PrimetimeVideos';
@@ -22,6 +21,26 @@ const normalizeText = (value = '') => value?.toString().trim().toLowerCase();
 const GS_TAGS = ['GS1', 'GS2', 'GS3', 'GS4'];
 
 const FALLBACK_STATE_HIGHLIGHTS = [
+  {
+    id: 'national',
+    label: 'National',
+    // redirect to the Current Affairs section on Home
+    path: '/#current-affairs',
+    image:
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/India_Gate_in_New_Delhi_03-2016.jpg/640px-India_Gate_in_New_Delhi_03-2016.jpg',
+    imageAlt: 'India Gate in New Delhi',
+    highlight: 'National Events'
+  },
+  {
+    id: 'international',
+    label: 'International',
+    // redirect to the Current Affairs section on Home
+    path: '/#current-affairs',
+    image:
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/United_Nations_Headquarters_in_New_York_City.jpg/640px-United_Nations_Headquarters_in_New_York_City.jpg',
+    imageAlt: 'United Nations Headquarters in New York City',
+    highlight: 'Global Affairs'
+  },
   {
     id: 'telangana',
     label: 'Telangana',
@@ -42,35 +61,6 @@ const FALLBACK_STATE_HIGHLIGHTS = [
   }
 ];
 
-const FALLBACK_LATEST_UPDATES = [
-  {
-    id: 'placeholder-1',
-    title: 'UPSC CSE 2026-27 PCM Mentorship classes',
-    content: 'Mentorship classes for UPSC CSE 2026-27 PCM.',
-    category: 'UPSC',
-    date: new Date(),
-    source: 'CivicCentre IAS',
-    link: '/#announce'
-  },
-  {
-    id: 'placeholder-2',
-    title: 'UPSC CSE Mains 2025 GS FLMT',
-    content: 'Full Length Mock Tests for UPSC CSE Mains 2025 GS.',
-    category: 'UPSC',
-    date: new Date(),
-    source: 'CivicCentre IAS',
-    link: '/#announce'
-  },
-  {
-    id: 'placeholder-3',
-    title: 'Mains Sectional Tests Series 2025 Batch-2',
-    content: 'Batch-2 of Mains Sectional Tests Series for 2025.',
-    category: 'UPSC',
-    date: new Date(),
-    source: 'CivicCentre IAS',
-    link: '/#announce'
-  }
-];
 
 const Home = () => {
   const { tagId } = useParams();
@@ -80,9 +70,8 @@ const Home = () => {
   const [selectedOption, setSelectedOption] = useState(null);
   const [answerStatus, setAnswerStatus] = useState(null); // 'correct' | 'wrong' | null
   const [currentAffairs, setCurrentAffairs] = useState([]);
-  const [latestUpdates, setLatestUpdates] = useState([]);
   const [dailyArticles, setDailyArticles] = useState([]);
-  const [filteredArticles, setFilteredArticles] = useState([]);
+  const [_filteredArticles, setFilteredArticles] = useState([]);
   const [quizResponses, setQuizResponses] = useState([]);
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [quizScore, setQuizScore] = useState(0);
@@ -656,25 +645,7 @@ const Home = () => {
           .slice(0, 5);
         setDailyArticles(dailyArticleList);
 
-        // Fetch Latest Updates
-        const updatesQuery = query(
-          collection(db, 'latest-updates'),
-          orderBy('date', 'desc'),
-          limit(3)
-        );
-        const updatesSnapshot = await getDocs(updatesQuery);
-        const updates = updatesSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            title: data.title,
-            content: data.content,
-            date: data.date ? data.date : new Date(),
-            category: data.category || 'General',
-            isImportant: data.isImportant || false
-          };
-        });
-        setLatestUpdates(updates);
+
 
         if (isGsTag) {
           const otherTags = GS_TAGS.filter(tag => tag !== activeTagId);
@@ -726,10 +697,6 @@ const Home = () => {
     : 'Join CivicCentre IAS, where aspirants transform into leaders. Your journey to becoming an IAS officer starts here.';
 
   const heroCtaHref = civicCentrePath('/courses');
-  const resolvedLatestUpdates =
-    latestUpdates.length > 0 ? latestUpdates : FALLBACK_LATEST_UPDATES;
-
-  const defaultSectionTitle = isGsTag ? `${activeTagId} Highlights` : 'Latest Updates';
   const closeLeadModal = () => setShowLeadModal(false);
 
   return (
@@ -750,7 +717,7 @@ const Home = () => {
 
       <div className="page-layout">
         <div className="main-column">
-          <div className="main-content-wrapper">
+          <div className="main-content-wrapper" id="main-content">
             <div className="main-sections-grid" style={{ marginTop: 0 }}>
               {/* Today's Quiz Section */}
               <section className="content-section">
@@ -905,9 +872,9 @@ const Home = () => {
                           <p className="date">{formatDate(article.date)}</p>
                         </div>
                       ))}
-                      <Link to="/recent-articles" className="card-button">
+                      <a href="https://www.examottcc.in/recent-articles" className="card-button">
                         View All <ArrowRight />
-                      </Link>
+                      </a>
                     </div>
                   )}
                 </div>
@@ -938,9 +905,9 @@ const Home = () => {
                           ) : (
                             <p className="empty-note">New articles coming soon.</p>
                           )}
-                          <Link to={`/gs/${tag}`} className="other-gs-link">
+                          <a href={`https://www.examottcc.in/gs/${tag}`} className="other-gs-link">
                             View {tag} Articles <ArrowRight />
-                          </Link>
+                          </a>
                         </div>
                       ))}
                     </div>
@@ -952,10 +919,10 @@ const Home = () => {
             <PrimetimeVideos />
 
             {/* State Current Affairs Section */}
-            <section className="content-section state-current-affairs-section">
+            <section id="current-affairs" className="content-section state-current-affairs-section">
               <div className="section-card state-current-affairs-card">
-                <h2>State Current Affairs</h2>
-                <p className="section-note">Choose your state to explore focused analysis and resources tailored for regional exams.</p>
+                <h2>Current Affairs</h2>
+                <p className="section-note">Choose a category to explore focused analysis and resources.</p>
                 <div className="state-current-affairs-list">
                   {stateHighlights.map((state) => (
                     <Link
@@ -1021,165 +988,99 @@ const Home = () => {
             {/* Subscription Model Section */}
             <section className="content-management-section subscription-section">
               <h2>Unlock Premium Content</h2>
-              <p className="subscription-intro">Subscribe to CivicCentre IAS for exclusive access to study materials, mock tests, and personalized guidance.</p>
+              <p className="subscription-intro">Subscribe to focused Current Affairs packs tailored to your needs — weekly practice, monthly summaries, or state-specific updates.</p>
               <div className="subscription-grid">
                 <div className="subscription-card">
-                  <h3>Basic Plan</h3>
-                  <p className="price">Rs. 1499/month</p>
+                  <h3>Weekly Current Affairs</h3>
+                  <p className="price">Rs. 100/week</p>
                   <ul>
-                    <li>Access to Monthly Magazines</li>
-                    <li>Daily Current Affairs</li>
-                    <li>Basic Study Notes</li>
+                    <li>50 curated current-affairs questions each week</li>
+                    <li>Short explanations and sources for every question</li>
+                    <li>Ideal for steady weekly practice</li>
                   </ul>
-                  <a
-                    className="subscribe-button"
-                    href={civicCentrePath('/#popular-courses')}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Choose Basic
-                  </a>
+                  <div className="subscription-actions">
+                    <a
+                      className="subscribe-button"
+                      href="https://www.examottcc.in/courses"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Explore Now
+                    </a>
+                    <a
+                      className="subscribe-button"
+                      href="https://www.examottcc.in/buy?course=weekly-current-affairs"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Join
+                    </a>
+                  </div>
                 </div>
                 <div className="subscription-card featured-plan">
-                  <h3>Premium Plan</h3>
-                  <p className="price">Rs. 1999/month</p>
+                  <h3>Monthly Current Affairs</h3>
+                  <p className="price">Rs. 100/month</p>
                   <ul>
-                    <li>All Basic features</li>
-                    <li>Access to All Publications</li>
-                    <li>Full Mock Test Series</li>
-                    <li>Personalized Mentorship</li>
+                    <li>Comprehensive monthly compilation of current affairs</li>
+                    <li>Topical summaries, analysis and practice questions</li>
+                    <li>Best for month-wise revision and consolidation</li>
                   </ul>
-                  <a
-                    className="subscribe-button"
-                    href={civicCentrePath('/#academy-excellence')}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Choose Premium
-                  </a>
+                  <div className="subscription-actions">
+                    <a
+                      className="subscribe-button"
+                      href="https://www.examottcc.in/courses"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Explore Now
+                    </a>
+                    <a
+                      className="subscribe-button"
+                      href="https://www.examottcc.in/buy?course=monthly-current-affairs"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Join
+                    </a>
+                  </div>
                 </div>
                 <div className="subscription-card">
-                  <h3>Annual Plan</h3>
-                  <p className="price">Rs. 19999/year</p>
+                  <h3>State-specific Current Affairs</h3>
+                  <p className="price">Rs. 100/month</p>
                   <ul>
-                    <li>All Premium features</li>
-                    <li>2 Months Free!</li>
-                    <li>Exclusive Webinars</li>
+                    <li>Focused current affairs for your chosen state</li>
+                    <li>State policies, local developments and practice questions</li>
+                    <li>Great for state PSCs and regional preparation</li>
                   </ul>
-                  <a
-                    className="subscribe-button"
-                    href={civicCentrePath('/#cta')}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Choose Annual
-                  </a>
+                  <div className="subscription-actions">
+                    <a
+                      className="subscribe-button"
+                      href="https://www.examottcc.in/courses"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Explore Now
+                    </a>
+                    <a
+                      className="subscribe-button"
+                      href="https://www.examottcc.in/buy?course=state-current-affairs"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Join
+                    </a>
+                  </div>
                 </div>
               </div>
             </section>
-            <DownloadAppSection />
+            <div id="download-app-section">
+              <DownloadAppSection />
+            </div>
           </div>
         </div>
 
         {/* Sidebar */}
         <aside className="sidebar">
-          {/* Latest Updates Section */}
-          <section className="content-section" id={isGsTag ? 'gs-article-feed' : 'latest-updates'}>
-            <div className="section-card latest-updates-card">
-              <h2 className="latest-heading">
-                {!isDateFiltered && (
-                  <span className="latest-heading-label">Latest</span>
-                )}
-                <span className="latest-heading-title">
-                  {isDateFiltered ? `Articles from ${formatDate(selectedDate)}` : defaultSectionTitle}
-                </span>
-                {isDateFiltered && (
-                  <button 
-                    onClick={clearDateFilter}
-                    className="clear-filter-btn"
-                    style={{
-                      marginLeft: '1rem',
-                      padding: '0.25rem 0.5rem',
-                      fontSize: '0.8rem',
-                      background: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '0.25rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Clear Filter
-                  </button>
-                )}
-              </h2>
-              {loading ? (
-                <p>Loading updates...</p>
-              ) : (
-                <div className="section-content">
-                  {isDateFiltered ? (
-                    filteredArticles.length > 0 ? (
-                    filteredArticles.map((article) => (
-                      <div key={article.id} className="content-item">
-                        <h3>
-                          <Link
-                            to={`/current-affairs/${article.slug || article.id}`}
-                            className="content-link"
-                          >
-                            {article.title}
-                          </Link>
-                        </h3>
-                          <div className="update-meta">
-                            {article.domains?.gs && (
-                              <Link to={`/gs/${article.domains.gs}`} className="tag-link">
-                                {article.domains.gs}
-                              </Link>
-                            )}
-                            <span className="date">{formatDate(article.date)}</span>
-                          </div>
-                          <p className="summary">
-                            {article.content ? createSnippet(article.content, 150) : 'Summary not available.'}
-                          </p>
-                        </div>
-                      ))
-                    ) : (
-                      <p>No articles found for {formatDate(selectedDate)}</p>
-                    )
-                    ) : (
-                    resolvedLatestUpdates.slice(0, 2).map((update) => {
-                      const updateSource = update.source || 'CivicCentre IAS';
-                      const updateLink = civicCentrePath(update.link || '/#announce');
-                      const updateSnippet = update.content ? createSnippet(update.content, 150) : 'Details coming soon.';
-                      const updateCategory = update.category || 'General';
-                      const normalizedCategory = updateCategory.toUpperCase();
-                      const categoryIsGs = GS_TAGS.includes(normalizedCategory);
-                      return (
-                        <div key={update.id} className="content-item">
-                          <h3>
-                            {update.isImportant && <span className="important-badge">Important</span>}
-                            <a href={updateLink} className="content-link" target="_blank" rel="noopener noreferrer">
-                              {update.title}
-                            </a>
-                          </h3>
-                          <div className="update-meta">
-                            {categoryIsGs ? (
-                              <Link to={`/gs/${normalizedCategory}`} className="tag-link">
-                                {normalizedCategory}
-                              </Link>
-                            ) : (
-                              <span className="category">{updateCategory}</span>
-                            )}
-                            <span className="source">From {updateSource}</span>
-                            <span className="date">{formatDate(update.date)}</span>
-                          </div>
-                          <p className="summary">{updateSnippet}</p>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              )}
-            </div>
-          </section>
 
           <div className="sidebar-sticky-group">
             {/* Calendar Section */}
@@ -1217,9 +1118,9 @@ const Home = () => {
                   </li>
                 ))}
               </ul>
-              <Link to="/recent-articles" className="sidebar-cta-link">
+              <a href="https://www.examottcc.in/recent-articles" className="sidebar-cta-link">
                 View All Articles
-              </Link>
+              </a>
             </div>
           </div>
         </aside>

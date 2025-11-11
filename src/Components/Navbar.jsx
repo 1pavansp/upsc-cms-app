@@ -9,8 +9,9 @@ const PRIMARY_LINKS = [
   { label: 'TSPSC', href: `${EXAM_OTT_BASE_URL}/#popular-courses` },
   { label: 'APPSC', href: `${EXAM_OTT_BASE_URL}/#popular-courses` },
   { label: 'Materials', href: `${EXAM_OTT_BASE_URL}/#materials` },
-  { label: 'Scholarship Tests', href: `${EXAM_OTT_BASE_URL}/#goals` },
-  { label: 'ExamOTT', href: `${EXAM_OTT_BASE_URL}/#cta` }
+  // Added International and National links to navigate to Home's Current Affairs section
+  { label: 'International', href: '/#current-affairs' },
+  { label: 'National', href: '/#current-affairs' }
 ];
 
 const MORE_LINKS = [
@@ -37,11 +38,7 @@ const Navbar = () => {
           <span></span>
         </a>
 
-        <nav
-          className="navbar-menu"
-          onMouseEnter={() => setIsDesktopDropdownOpen(true)}
-          onMouseLeave={() => setIsDesktopDropdownOpen(false)}
-        >
+        <nav className="navbar-menu">
           {PRIMARY_LINKS.map((item) => (
             <a key={item.label} href={item.href} className="navbar-link">
               {item.label}

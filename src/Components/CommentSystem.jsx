@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, addDoc, getDocs, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, onSnapshot, serverTimestamp, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Send, Heart, MessageCircle, User, Clock } from 'lucide-react';
 import './CommentSystem.css';
 
-const CommentSystem = () => {
+const CommentSystem = ({ articleId }) => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [authorName, setAuthorName] = useState('');
@@ -232,8 +232,14 @@ const CommentSystem = () => {
 
   // Fetch comments from Firebase (optional)
   useEffect(() => {
+    if (!articleId) return;
+
     const commentsRef = collection(db, 'comments');
-    const q = query(commentsRef, orderBy('timestamp', 'desc'));
+    const q = query(
+      commentsRef,
+      where('articleId', '==', articleId),
+      orderBy('timestamp', 'desc')
+    );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const commentsData = snapshot.docs.map(doc => ({
@@ -242,26 +248,29 @@ const CommentSystem = () => {
         timestamp: doc.data().timestamp?.toDate() || new Date()
       }));
       
-      // Only use Firebase comments if they exist, otherwise keep fallback
+      // Only use Firebase comments if they exist, otherwise use fallback
       if (commentsData.length > 0) {
         setComments(commentsData);
+      } else {
+        setComments([]); // Empty for new articles
       }
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [articleId]);
 
 
   // Handle comment submission
   const handleSubmitComment = async (e) => {
     e.preventDefault();
-    if (!newComment.trim() || !authorName.trim()) return;
+    if (!newComment.trim() || !authorName.trim() || !articleId) return;
 
     setIsSubmitting(true);
     try {
       await addDoc(collection(db, 'comments'), {
         content: newComment.trim(),
         author: authorName.trim(),
+        articleId: articleId,
         timestamp: serverTimestamp(),
         likes: 0,
         replies: []

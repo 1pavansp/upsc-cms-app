@@ -268,3 +268,56 @@
     height: 46px;
   }
 }
+
+/* Dark mode overrides - use CSS variables defined in index.css */
+.dark .navbar {
+  background: var(--background-body);
+  border-bottom: 1px solid var(--border-card);
+  box-shadow: var(--glass-shadow);
+}
+
+.dark .navbar-container {
+  color: var(--text-primary);
+}
+
+.dark .navbar-brand span {
+  color: var(--text-primary);
+}
+
+.dark .navbar-menu a,
+.dark .navbar-menu button,
+.dark .navbar-link,
+.dark .navbar-dropdown-toggle,
+.dark .navbar-dropdown-link {
+  color: var(--text-secondary);
+}
+
+.dark .navbar-link:hover,
+.dark .navbar-dropdown-toggle:hover,
+.dark .navbar-dropdown-link:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+}
+
+.dark .navbar-dropdown-menu {
+  background: var(--background-card);
+  border: 1px solid var(--border-card);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+}
+
+.dark .navbar-button,
+.dark .navbar-mobile-button {
+  background: var(--text-primary);
+  color: var(--background-body);
+  border-color: transparent;
+}
+
+.dark .navbar-mobile-panel,
+.dark .navbar-mobile-button,
+.dark .navbar-mobile-link,
+.dark .navbar-mobile-submenu-link,
+.dark .navbar-mobile-dropdown-toggle {
+  background: var(--background-card);
+  color: var(--text-primary);
+  border-color: var(--border-card);
+}

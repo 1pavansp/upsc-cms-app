@@ -22,6 +22,8 @@ const CUSTOM_CATEGORY_VALUE = 'custom';
 
 const CATEGORY_OPTIONS = [
     { value: 'General', label: 'General Current Affairs' },
+    { value: 'National', label: 'National Current Affairs' },
+    { value: 'International', label: 'International Current Affairs' },
     { value: 'Telangana', label: 'Telangana Current Affairs' },
     { value: 'Andhra Pradesh', label: 'Andhra Pradesh Current Affairs' },
     { value: 'GS1', label: 'GS1 Focus' },

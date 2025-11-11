@@ -40,9 +40,10 @@
   --background-body: #111827;
   --background-card: rgba(30, 41, 59, 0.8);
   --border-card: rgba(75, 85, 99, 0.5);
-  --text-primary: #f9fafb;
-  --text-secondary: #d1d5db;
-  --text-light: #9ca3af;
+  /* Force white text across the site in dark mode as requested */
+  --text-primary: #ffffff;
+  --text-secondary: #ffffff;
+  --text-light: #ffffff;
 
   /* Dark Mode Shadows */
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);

@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import {
-  Apple,
   ChevronDown,
   ChevronUp,
   Facebook as FacebookIcon,
   Instagram as InstagramIcon,
-  Play,
   Youtube as YoutubeIcon,
 } from 'lucide-react';
 import './Footer.css';
@@ -14,6 +12,7 @@ const EXTERNAL_BASE_URL = 'https://www.examottcc.in';
 
 const FooterSection = () => {
   const [openSection, setOpenSection] = useState(null);
+  const [showIosModal, setShowIosModal] = useState(false);
 
   const toggleSection = (section) => {
     setOpenSection((current) => (current === section ? null : section));
@@ -85,15 +84,17 @@ const FooterSection = () => {
   const storeBadges = [
     {
       label: 'Google Play',
-      href: 'https://play.google.com/store/apps/details?id=com.civiccentreias',
-      icon: Play,
-      lines: ['Get it on', 'Google Play'],
+      // Updated to point to the provided ExamOTT app id
+      href: 'https://play.google.com/store/apps/details?id=com.examott.app&pcampaignid=web_share',
+      imageSrc: '/assets/google-play-badge.svg',
+      imageAlt: 'Get it on Google Play',
     },
     {
       label: 'App Store',
-      href: 'https://apps.apple.com/in/app/civiccentreias',
-      icon: Apple,
-      lines: ['Download on the', 'App Store'],
+      // iOS app not yet available — we'll show a coming soon message on click
+      href: '#',
+      imageSrc: '/assets/app-store-badge.svg',
+      imageAlt: 'Download on the App Store',
     },
   ];
 
@@ -253,7 +254,13 @@ const FooterSection = () => {
 
         <div className="footer-brand-block">
           <div className="footer-brand">
-            <div className="footer-brand-mark">CivicCentre IAS</div>
+            <img
+              src="/assets/logo.png"
+              alt="CivicCentre IAS logo"
+              className="footer-brand-logo"
+              loading="lazy"
+              decoding="async"
+            />
             <p className="footer-brand-copy">
               We understand that every student has unique needs and abilities,
               that's why our curriculum is designed to adapt.
@@ -261,19 +268,38 @@ const FooterSection = () => {
           </div>
           <div className="footer-app-links">
             {storeBadges.map((badge) => (
-              <a
-                key={badge.label}
-                className="footer-app-button"
-                href={badge.href}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {React.createElement(badge.icon, { size: 18 })}
-                <span className="footer-app-text">
-                  <span>{badge.lines[0]}</span>
-                  <strong>{badge.lines[1]}</strong>
-                </span>
-              </a>
+              badge.label === 'App Store' ? (
+                <button
+                  key={badge.label}
+                  type="button"
+                  className="footer-app-button"
+                  onClick={() => setShowIosModal(true)}
+                >
+                  <img
+                    src={badge.imageSrc}
+                    alt={badge.imageAlt}
+                    className="footer-app-badge"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </button>
+              ) : (
+                <a
+                  key={badge.label}
+                  className="footer-app-button"
+                  href={badge.href}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <img
+                    src={badge.imageSrc}
+                    alt={badge.imageAlt}
+                    className="footer-app-badge"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </a>
+              )
             ))}
           </div>
         </div>
@@ -282,6 +308,19 @@ const FooterSection = () => {
       <div className="footer-bottom">
         © {new Date().getFullYear()} CivicCentre IAS. All Rights Reserved.
       </div>
+      {showIosModal && (
+        <div className="coming-soon-modal" role="dialog" aria-modal="true">
+          <div className="coming-soon-backdrop" onClick={() => setShowIosModal(false)} />
+          <div className="coming-soon-dialog">
+            <button type="button" className="coming-soon-close" onClick={() => setShowIosModal(false)} aria-label="Close">&times;</button>
+            <h3>App Coming Soon</h3>
+            <p>iOS version of the app is coming soon. We'll notify you when it's available.</p>
+            <div className="coming-soon-actions">
+              <button type="button" className="btn-glass" onClick={() => setShowIosModal(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </footer>
   );
 };

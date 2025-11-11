@@ -1,9 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { collection, getDocs, query, where, Timestamp, limit } from 'firebase/firestore';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
-import { ArrowRight, Calendar as CalendarIcon } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { db } from '../firebase';
 import { formatDate, getDateRange } from '../utils/dateUtils';
 import './Home.css';
@@ -125,7 +123,7 @@ const SubjectArticlesPage = () => {
     fetchSubjectArticles();
   }, [normalizedTagId, subjectName]);
 
-  const fetchArticlesByDate = async (date) => {
+  const _fetchArticlesByDate = async (date) => {
     if (!normalizedTagId || !subjectName || !date) return;
 
     setLoading(true);
@@ -160,17 +158,17 @@ const SubjectArticlesPage = () => {
     }
   };
 
-  const handleDateChange = (date) => {
+  const _handleDateChange = (date) => {
     setSelectedDate(date);
     if (date) {
-      fetchArticlesByDate(date);
+      _fetchArticlesByDate(date);
     } else {
       setFilteredArticles([]);
       setIsDateFiltered(false);
     }
   };
 
-  const clearDateFilter = () => {
+  const _clearDateFilter = () => {
     setSelectedDate(null);
     setFilteredArticles([]);
     setIsDateFiltered(false);
@@ -276,35 +274,6 @@ const SubjectArticlesPage = () => {
         </div>
 
         <aside className="sidebar">
-          <div className="sidebar-section calendar-section">
-            <h3>
-              <CalendarIcon className="inline-block mr-2 h-5 w-5" />
-              Filter Articles by Date
-            </h3>
-            <div className="calendar-wrapper">
-              <DatePicker
-                selected={selectedDate}
-                onChange={handleDateChange}
-                inline
-                calendarClassName="sidebar-calendar"
-                showPopperArrow={false}
-                fixedHeight
-                isClearable
-              />
-              {isDateFiltered && (
-                <div className="date-filter-actions">
-                  <button
-                    type="button"
-                    className="date-filter-reset"
-                    onClick={clearDateFilter}
-                  >
-                    Clear filter
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
           {recentArticles.length > 0 && (
             <div className="sidebar-section">
               <h3>Recent {normalizedTagId} Articles</h3>

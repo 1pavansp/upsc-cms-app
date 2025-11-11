@@ -12,11 +12,9 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Calendar as CalendarIcon, Twitter, Facebook, Printer } from 'lucide-react';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
+import { Twitter, Facebook, Printer } from 'lucide-react';
 import 'react-quill/dist/quill.snow.css';
-import { formatDate, getDateRange } from '../utils/dateUtils';
+import { formatDate } from '../utils/dateUtils';
 import { ensureArticleHasSlug, normalizeFirestoreDate, slugify } from '../utils/articleUtils';
 import './ArticlePage.css';
 import CommentSystem from './CommentSystem';
@@ -74,48 +72,13 @@ const ArticlePage = () => {
   const navigate = useNavigate();
   const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date());
   const [error, setError] = useState(null);
   const [relatedArticles, setRelatedArticles] = useState([]);
-  const [filteredArticles, setFilteredArticles] = useState([]);
-  const [isDateFiltered, setIsDateFiltered] = useState(false);
   const [recentSidebarArticles, setRecentSidebarArticles] = useState([]);
 
-  const fetchArticlesByDate = async (date) => {
-    try {
-      const { startOfDay, endOfDay } = getDateRange(date);
-      const startTimestamp = Timestamp.fromDate(startOfDay);
-      const endTimestamp = Timestamp.fromDate(endOfDay);
 
-      const affairsQuery = query(
-        collection(db, 'current-affairs'),
-        where('date', '>=', startTimestamp),
-        where('date', '<=', endTimestamp),
-        orderBy('date', 'desc')
-      );
 
-      const affairsSnapshot = await getDocs(affairsQuery);
-      const dateFilteredArticles = await Promise.all(
-        affairsSnapshot.docs.map((docSnap) => ensureArticleHasSlug(docSnap))
-      );
 
-      setFilteredArticles(dateFilteredArticles);
-      setIsDateFiltered(true);
-    } catch (err) {
-      console.error('Error fetching articles by date:', err);
-      setFilteredArticles([]);
-    }
-  };
-
-  const handleDateChange = (date) => {
-    setSelectedDate(date);
-    if (date) {
-      fetchArticlesByDate(date);
-    } else {
-      setIsDateFiltered(false);
-      setFilteredArticles([]);
-    }
-  };
 
   useEffect(() => {
     const fetchArticleData = async () => {
@@ -493,70 +456,12 @@ const ArticlePage = () => {
           </section>
 
           <section className="content-section comment-section-wrapper">
-            <CommentSystem />
+            <CommentSystem articleId={article?.id} />
           </section>
         </div>
 
         <aside className="sidebar">
-          <div className="sidebar-section">
-            <h3>
-              <CalendarIcon size={20} /> Filter Articles by Date
-            </h3>
-            <div className="calendar-wrapper">
-              <DatePicker
-                selected={selectedDate}
-                onChange={handleDateChange}
-                showPopperArrow={false}
-                fixedHeight
-                isClearable
-                inline
-              />
-            </div>
-          </div>
 
-          {isDateFiltered && (
-            <div className="sidebar-section">
-              <h3>
-                Articles from {formatDate(selectedDate)}
-                <button
-                  onClick={() => {
-                    setIsDateFiltered(false);
-                    setFilteredArticles([]);
-                    setSelectedDate(new Date());
-                  }}
-                  style={{
-                    marginLeft: '0.5rem',
-                    padding: '0.2rem 0.4rem',
-                    fontSize: '0.7rem',
-                    background: '#ef4444',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '0.2rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Clear
-                </button>
-              </h3>
-              {filteredArticles.length > 0 ? (
-                <ul className="event-list">
-                  {filteredArticles.map((articleItem) => (
-                    <li key={articleItem.id}>
-                      <Link
-                        to={`/current-affairs/${articleItem.slug || articleItem.id}`}
-                        className="event-link"
-                      >
-                        <strong>{articleItem.title}</strong>
-                        <p>{formatDate(articleItem.date)}</p>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p>No articles found for this date</p>
-              )}
-            </div>
-          )}
 
           {recentSidebarArticles.length > 0 && (
             <div className="sidebar-section">

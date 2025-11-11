@@ -74,6 +74,11 @@
 }
 
 .article-share-row {
+  display: none;
+}
+
+/* Only show share elements when user is admin */
+body[data-user-role="admin"] .article-share-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;

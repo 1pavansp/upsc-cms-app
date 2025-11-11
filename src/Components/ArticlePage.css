@@ -432,6 +432,11 @@
   font-size: 1.125rem;
   line-height: 1.75;
   color: #374151;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 2rem;
+  margin: 2rem 0;
 }
 
 .article-body h1,
@@ -460,6 +465,8 @@
 
 .dark .article-body {
   color: var(--text-secondary);
+  background: rgba(17, 24, 39, 0.8);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .dark .article-body h1,

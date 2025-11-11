@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import './DownloadAppSection.css';
 
@@ -5,8 +6,10 @@ const MotionImg = motion.img;
 const MotionDiv = motion.div;
 
 const DownloadAppSection = () => {
+  const [showIosModal, setShowIosModal] = useState(false);
   return (
-    <section className="content-management-section download-app-section">
+    <>
+      <section className="content-management-section download-app-section">
       <div className="download-app-section-inner">
         <div className="download-app-mobile">
           <div className="download-app-mobile-glow" />
@@ -46,10 +49,13 @@ const DownloadAppSection = () => {
                 decoding="async"
               />
             </a>
-            <a
-              href="https://apps.apple.com/in/app/civiccentreias"
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              className="download-app-store-button"
+              onClick={(e) => {
+                e.preventDefault();
+                setShowIosModal(true);
+              }}
             >
               <img
                 src="/assets/app-store-badge.svg"
@@ -57,7 +63,7 @@ const DownloadAppSection = () => {
                 loading="lazy"
                 decoding="async"
               />
-            </a>
+            </button>
           </div>
 
           <div className="download-app-mobile-phones">
@@ -126,10 +132,13 @@ const DownloadAppSection = () => {
                     decoding="async"
                   />
                 </a>
-                <a
-                  href="https://apps.apple.com/in/app/civiccentreias"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  className="download-app-store-button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setShowIosModal(true);
+                  }}
                 >
                   <img
                     src="/assets/app-store-badge.svg"
@@ -137,7 +146,7 @@ const DownloadAppSection = () => {
                     loading="lazy"
                     decoding="async"
                   />
-                </a>
+                </button>
               </div>
             </div>
           </MotionDiv>
@@ -174,7 +183,22 @@ const DownloadAppSection = () => {
           </MotionDiv>
         </div>
       </div>
-    </section>
+      </section>
+
+      {showIosModal && (
+        <div className="coming-soon-modal" role="dialog" aria-modal="true">
+          <div className="coming-soon-backdrop" onClick={() => setShowIosModal(false)} />
+          <div className="coming-soon-dialog">
+            <button type="button" className="coming-soon-close" onClick={() => setShowIosModal(false)} aria-label="Close">&times;</button>
+            <h3>App Coming Soon</h3>
+            <p>iOS version of the app is coming soon. We'll notify you when it's available.</p>
+            <div className="coming-soon-actions">
+              <button type="button" className="btn-glass" onClick={() => setShowIosModal(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

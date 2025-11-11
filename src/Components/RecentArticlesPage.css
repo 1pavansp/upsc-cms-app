@@ -23,22 +23,20 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
 }
 
 .recent-articles-list li {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  padding-bottom: 0.85rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.35);
-}
-
-.recent-articles-list li:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--border-card);
+  background: var(--background-card);
+  border-radius: 0.6rem;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
 }
 
 .recent-article-primary {
@@ -52,16 +50,17 @@
   font-weight: 600;
   color: var(--text-primary);
   text-decoration: none;
-  transition: color 0.2s ease;
+  transition: color 0.18s ease, transform 0.12s ease;
 }
 
 .recent-articles-list li a:hover {
-  color: var(--brand-primary);
+  color: var(--brand-link);
+  transform: translateY(-2px);
 }
 
 .recent-articles-list li span {
   font-size: 0.82rem;
-  color: #64748b;
+  color: var(--text-secondary);
   letter-spacing: 0.02em;
 }
 
@@ -203,6 +202,12 @@
   }
 }
 
+@media (max-width: 1024px) {
+  .recent-articles-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 520px) {
   .recent-articles-page {
     padding: 0 1rem 1.5rem;
@@ -213,6 +218,7 @@
   }
 
   .recent-articles-list {
+    grid-template-columns: 1fr;
     gap: 0.85rem;
   }
 }

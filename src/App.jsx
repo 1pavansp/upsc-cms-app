@@ -4,6 +4,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation, Outlet } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from './firebase';
 import Navbar from './Components/Navbar';
 import Footer from './Components/Footer';
 import ErrorBoundary from './Components/ErrorBoundary';
@@ -15,8 +17,10 @@ function App() {
   const location = useLocation();
   const showFooter = location.pathname !== '/admin/dashboard';
   const [mode, setMode] = useState('light');
+  const [user] = useAuthState(auth);
 
   useEffect(() => {
+    // Set theme
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
@@ -26,7 +30,14 @@ function App() {
       setMode('light');
       document.documentElement.classList.remove('dark');
     }
-  }, []);
+
+    // Set admin role
+    if (user) {
+      document.body.setAttribute('data-user-role', 'admin');
+    } else {
+      document.body.removeAttribute('data-user-role');
+    }
+  }, [user]);
 
   const toggleDarkMode = () => {
     const newMode = mode === 'light' ? 'dark' : 'light';
