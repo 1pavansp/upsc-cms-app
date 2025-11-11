@@ -8,6 +8,8 @@ import CommentSystem from './CommentSystem';
 import { ensureArticleHasSlug, getArticlePublicUrl, getArticleRelativePath } from '../utils/articleUtils';
 import './Home.css';
 import './RecentArticlesPage.css';
+import Seo from './Seo';
+import { buildBreadcrumbSchema, buildCollectionPageSchema } from '../seo/seoConfig';
 
 const RecentArticlesPage = () => {
   const [articles, setArticles] = useState([]);
@@ -148,8 +150,45 @@ const RecentArticlesPage = () => {
     };
   }, []);
 
+  const canonicalPath = '/recent-articles';
+  const pageTitle = 'Recent UPSC Current Affairs Articles';
+  const pageDescription =
+    'Track the latest Civic Centre IAS current affairs write-ups, daily digests and GS-ready briefs for UPSC IAS.';
+  const seoKeywords = [
+    'recent upsc articles',
+    'daily current affairs',
+    'Civic Centre IAS',
+    'Exam OTT'
+  ];
+
+  const structuredData = useMemo(() => {
+    const breadcrumb = buildBreadcrumbSchema([
+      { name: 'Home', path: '/' },
+      { name: 'Recent Articles', path: canonicalPath }
+    ]);
+    const collection = buildCollectionPageSchema({
+      title: pageTitle,
+      description: pageDescription,
+      path: canonicalPath,
+      items: articles.slice(0, 10).map((article) => ({
+        title: article.title,
+        path: getArticleRelativePath(article),
+        date: article.date
+      }))
+    });
+    return [breadcrumb, collection].filter(Boolean);
+  }, [articles, canonicalPath, pageDescription, pageTitle]);
+
   return (
-    <main className="main-content recent-articles-page">
+    <>
+      <Seo
+        title={pageTitle}
+        description={pageDescription}
+        keywords={seoKeywords}
+        canonicalPath={canonicalPath}
+        structuredData={structuredData}
+      />
+      <main className="main-content recent-articles-page">
       <div className="page-layout">
         <div className="main-column">
           <div className="main-content-wrapper">
@@ -236,7 +275,8 @@ const RecentArticlesPage = () => {
           </div>
         </aside>
       </div>
-    </main>
+      </main>
+    </>
   );
 };
 

@@ -22,13 +22,15 @@ function App() {
   useEffect(() => {
     // Set theme
     const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-      setMode('dark');
+    const initialMode = savedTheme === 'dark' ? 'dark' : 'light';
+    setMode(initialMode);
+    if (initialMode === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
-      setMode('light');
       document.documentElement.classList.remove('dark');
+      if (savedTheme !== 'light') {
+        localStorage.setItem('theme', 'light');
+      }
     }
 
     // Set admin role

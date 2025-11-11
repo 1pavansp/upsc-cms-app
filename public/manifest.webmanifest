@@ -1,0 +1,22 @@
+{
+  "name": "Civic Centre IAS Current Affairs",
+  "short_name": "CC IAS",
+  "description": "Daily UPSC IAS current affairs, PYQs, quizzes and GS dashboards curated by Civic Centre IAS mentors.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/assets/podcast-logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/podcast-logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

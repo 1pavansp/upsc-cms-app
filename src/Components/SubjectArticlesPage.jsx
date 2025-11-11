@@ -6,7 +6,9 @@ import { db } from '../firebase';
 import { formatDate, getDateRange } from '../utils/dateUtils';
 import './Home.css';
 import './SubjectArticlesPage.css';
-import { ensureArticleHasSlug, slugify } from '../utils/articleUtils';
+import { ensureArticleHasSlug, slugify, getArticleRelativePath } from '../utils/articleUtils';
+import Seo from './Seo';
+import { buildBreadcrumbSchema, buildCollectionPageSchema } from '../seo/seoConfig';
 
 const SUBJECTS_BY_GS = {
   GS1: ['History', 'Geography', 'Society', 'Art & Culture'],
@@ -177,9 +179,61 @@ const SubjectArticlesPage = () => {
   const articlesToDisplay = isDateFiltered ? filteredArticles : articles;
   const hasValidSubject = Boolean(subjectName);
   const tagParam = tagId || '';
+  const baseGsPath = normalizedTagId ? `/gs/${normalizedTagId.toLowerCase()}` : '/gs';
+  const canonicalPath = hasValidSubject
+    ? `${baseGsPath}/${subjectId?.toLowerCase() ?? ''}`
+    : baseGsPath;
+  const pageTitle = hasValidSubject
+    ? `${normalizedTagId} – ${subjectName} UPSC Current Affairs`
+    : 'GS Subject Articles';
+  const pageDescription = hasValidSubject
+    ? `Focused ${subjectName} coverage mapped to GS ${normalizedTagId}: briefs, PYQs and quizzes for UPSC IAS.`
+    : 'Browse structured UPSC GS subject articles, briefs and revision aids from Civic Centre IAS.';
+  const seoKeywords = hasValidSubject
+    ? [`${subjectName} notes`, `GS ${normalizedTagId}`, 'UPSC subject analysis']
+    : ['GS subjects', 'UPSC notes', 'Civic Centre IAS'];
+
+  const structuredData = useMemo(() => {
+    const breadcrumbItems = [
+      { name: 'Home', path: '/' },
+      { name: 'General Studies', path: '/gs' }
+    ];
+    if (normalizedTagId) {
+      breadcrumbItems.push({ name: `GS ${normalizedTagId}`, path: baseGsPath });
+    }
+    if (hasValidSubject) {
+      breadcrumbItems.push({ name: subjectName, path: canonicalPath });
+    }
+    const breadcrumb = buildBreadcrumbSchema(breadcrumbItems);
+    const collection = buildCollectionPageSchema({
+      title: pageTitle,
+      description: pageDescription,
+      path: canonicalPath,
+      items: articles.slice(0, 10).map((article) => ({
+        title: article.title,
+        path: getArticleRelativePath(article),
+        date: article.date,
+        keywords: [
+          article.domains?.gs,
+          ...(article.domains?.subjects || [])
+        ]
+          .filter(Boolean)
+          .join(', ')
+      }))
+    });
+    return [breadcrumb, collection].filter(Boolean);
+  }, [articles, baseGsPath, canonicalPath, hasValidSubject, normalizedTagId, pageDescription, pageTitle, subjectName]);
 
   return (
-    <main className="main-content subject-page subject-articles-page">
+    <>
+      <Seo
+        title={pageTitle}
+        description={pageDescription}
+        keywords={seoKeywords}
+        canonicalPath={canonicalPath}
+        structuredData={structuredData}
+      />
+      <main className="main-content subject-page subject-articles-page">
       <div className="page-layout">
         <div className="main-column">
           <div className="main-content-wrapper">
@@ -297,7 +351,8 @@ const SubjectArticlesPage = () => {
           )}
         </aside>
       </div>
-    </main>
+      </main>
+    </>
   );
 };
 

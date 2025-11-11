@@ -1,6 +1,6 @@
 // src/components/Home.jsx
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { collection, getDocs, query, orderBy, limit, where, Timestamp, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ArrowRight, Calendar as CalendarIcon } from 'lucide-react';
@@ -15,6 +15,8 @@ import PrimetimeVideos from './PrimetimeVideos';
 import DownloadAppSection from './DownloadAppSection';
 import './Home.css';
 import { civicCentrePath } from '../constants/civicCentre';
+import Seo from './Seo';
+import { buildBreadcrumbSchema, buildCollectionPageSchema } from '../seo/seoConfig';
 
 const normalizeText = (value = '') => value?.toString().trim().toLowerCase();
 
@@ -85,6 +87,32 @@ const Home = () => {
     useState(FALLBACK_STATE_HIGHLIGHTS);
   const [quizLoading, setQuizLoading] = useState(true);
   const [showLeadModal, setShowLeadModal] = useState(false);
+
+  const homeStructuredData = useMemo(() => {
+    const items = currentAffairs.slice(0, 6).map((article) => ({
+      title: article.title,
+      path: `/current-affairs/${article.slug || article.id}`,
+      date: article.date,
+      keywords: [
+        article.domains?.gs,
+        ...(article.domains?.subjects || []),
+        ...(article.tags || [])
+      ]
+        .filter(Boolean)
+        .join(', ')
+    }));
+
+    const breadcrumb = buildBreadcrumbSchema([{ name: 'Home', path: '/' }]);
+    const collection = buildCollectionPageSchema({
+      title: 'UPSC IAS Daily Current Affairs Digest',
+      description:
+        'Daily UPSC IAS current affairs capsules, GS dashboards, quizzes and regional briefs curated by Civic Centre IAS mentors.',
+      path: '/',
+      items
+    });
+
+    return [breadcrumb, collection].filter(Boolean);
+  }, [currentAffairs]);
 
   const renderRichText = (markup, fallbackText) => {
     if (typeof markup === 'string' && markup.trim().length > 0) {
@@ -695,12 +723,27 @@ const Home = () => {
   const heroSubtext = isGsTag
     ? `Curated analysis, quizzes, and resources mapped to ${activeTagId} so you can revise every theme with confidence.`
     : 'Join CivicCentre IAS, where aspirants transform into leaders. Your journey to becoming an IAS officer starts here.';
+  const homeSeoDescription = isGsTag
+    ? `GS ${activeTagId} specific UPSC IAS current affairs, static notes, quizzes and PYQs with Civic Centre IAS.`
+    : 'Daily UPSC IAS current affairs, GS dashboards, quizzes and regional briefs powered by Civic Centre IAS mentors.';
+  const homeKeywords = isGsTag
+    ? [`GS ${activeTagId}`, 'UPSC GS analysis', 'daily current affairs', 'Civic Centre IAS']
+    : ['UPSC current affairs', 'IAS quiz', 'GS notes', 'Civic Centre IAS', 'Exam OTT'];
+  const canonicalPath = tagId ? `/tags/${tagId}` : '/';
 
   const heroCtaHref = civicCentrePath('/courses');
   const closeLeadModal = () => setShowLeadModal(false);
 
   return (
-    <main className="main-content">
+    <>
+      <Seo
+        title={isGsTag ? `GS ${activeTagId} Current Affairs` : 'UPSC IAS Current Affairs Hub'}
+        description={homeSeoDescription}
+        keywords={homeKeywords}
+        canonicalPath={canonicalPath}
+        structuredData={homeStructuredData}
+      />
+      <main className="main-content">
       {/* Hero Section */}
       <section className={`hero-section ${isGsTag ? 'gs-hero' : ''}`}>
         <h1>{heroHeadline}</h1>
@@ -1125,7 +1168,8 @@ const Home = () => {
           </div>
         </aside>
       </div>
-    </main>
+      </main>
+    </>
   );
 };
 

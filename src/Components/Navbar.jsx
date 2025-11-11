@@ -5,10 +5,10 @@ import './Navbar.css';
 const EXAM_OTT_BASE_URL = 'https://www.examottcc.in';
 
 const PRIMARY_LINKS = [
+  { label: 'Home', href: '/' },
   { label: 'UPSC', href: `${EXAM_OTT_BASE_URL}/#popular-courses` },
   { label: 'TSPSC', href: `${EXAM_OTT_BASE_URL}/#popular-courses` },
   { label: 'APPSC', href: `${EXAM_OTT_BASE_URL}/#popular-courses` },
-  { label: 'Materials', href: `${EXAM_OTT_BASE_URL}/#materials` },
   // Added International and National links to navigate to Home's Current Affairs section
   { label: 'International', href: '/#current-affairs' },
   { label: 'National', href: '/#current-affairs' }

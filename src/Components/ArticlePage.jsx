@@ -18,6 +18,8 @@ import { formatDate } from '../utils/dateUtils';
 import { ensureArticleHasSlug, normalizeFirestoreDate, slugify } from '../utils/articleUtils';
 import './ArticlePage.css';
 import CommentSystem from './CommentSystem';
+import Seo from './Seo';
+import { buildArticleSchema, buildBreadcrumbSchema } from '../seo/seoConfig';
 
 const GS_TAGS = ['GS1', 'GS2', 'GS3', 'GS4'];
 const STATE_TAGS = [
@@ -34,6 +36,39 @@ const STATE_TAGS = [
 ];
 const RECENT_SIDEBAR_LIMIT = 6;
 const RELATED_ARTICLES_LIMIT = 6;
+
+const createArticleExcerpt = (value = '', limit = 180) => {
+  if (!value) return '';
+  const plainText = value
+    .replace(/<[^>]+>/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!plainText) return '';
+  return plainText.length > limit ? `${plainText.slice(0, limit).trim()}…` : plainText;
+};
+
+const getArticleKeywords = (article = {}) => {
+  const keywords = new Set();
+  if (article?.domains?.gs) {
+    keywords.add(article.domains.gs);
+  }
+  (article?.domains?.subjects || []).forEach((subject) => subject && keywords.add(subject));
+  (article?.tags || []).forEach((tag) => tag && keywords.add(tag));
+  if (article?.category) {
+    keywords.add(article.category);
+  }
+  return Array.from(keywords).filter(Boolean);
+};
+
+const getArticlePath = (article, fallbackId) => {
+  if (article?.slug || article?.id) {
+    return `/current-affairs/${article.slug || article.id}`;
+  }
+  if (fallbackId) {
+    return `/current-affairs/${fallbackId}`;
+  }
+  return '/current-affairs';
+};
 
 const ArticleActions = ({ article }) => {
   const articleUrl = window.location.href;
@@ -160,7 +195,6 @@ const ArticlePage = () => {
         }
 
         setArticle(primaryArticle);
-        document.title = `${primaryArticle.title} | CivicCentre IAS`;
 
         if (primaryArticle.domains?.gs) {
           try {
@@ -248,34 +282,138 @@ const ArticlePage = () => {
     [article?.category, article?.domains?.gs]
   );
 
+  const canonicalPath = getArticlePath(article, articleId);
+
+  const articleSeoDescription = useMemo(() => {
+    if (!article) {
+      return 'UPSC IAS current affairs deep-dive curated by Civic Centre IAS mentors.';
+    }
+    return (
+      article.summary ||
+      article.excerpt ||
+      createArticleExcerpt(article.content) ||
+      'UPSC IAS current affairs deep-dive curated by Civic Centre IAS mentors.'
+    );
+  }, [article]);
+
+  const articleKeywords = useMemo(() => getArticleKeywords(article || {}), [article]);
+
+  const breadcrumbSchema = useMemo(() => {
+    const crumbs = [
+      { name: 'Home', path: '/' },
+      { name: 'Current Affairs', path: '/recent-articles' }
+    ];
+    if (article?.domains?.gs) {
+      crumbs.push({
+        name: `${article.domains.gs} Articles`,
+        path: `/gs/${article.domains.gs.toLowerCase()}`
+      });
+    }
+    const articleCrumbName = article?.title || 'Current Affairs Article';
+    crumbs.push({ name: articleCrumbName, path: canonicalPath });
+    return buildBreadcrumbSchema(crumbs);
+  }, [article, canonicalPath]);
+
+  const articleSchema = useMemo(() => {
+    if (!article) return null;
+    return buildArticleSchema({
+      title: article.title,
+      description: articleSeoDescription,
+      path: canonicalPath,
+      image: article.imageUrl,
+      datePublished: article.date,
+      keywords: articleKeywords,
+      sections: [
+        article.domains?.gs,
+        ...(article.domains?.subjects || []),
+        article.category
+      ].filter(Boolean)
+    });
+  }, [article, articleSeoDescription, canonicalPath, articleKeywords]);
+
+  const structuredData = useMemo(
+    () => [breadcrumbSchema, articleSchema].filter(Boolean),
+    [breadcrumbSchema, articleSchema]
+  );
+
+  const articleAdditionalMeta = useMemo(() => {
+    if (!article) return [];
+    const meta = [];
+    if (article.date instanceof Date) {
+      meta.push({ property: 'article:published_time', content: article.date.toISOString() });
+    }
+    if (article.domains?.gs) {
+      meta.push({ property: 'article:section', content: article.domains.gs });
+    }
+    const tagSet = new Set([
+      ...(article.domains?.subjects || []),
+      ...(article.tags || [])
+    ].filter(Boolean));
+    tagSet.forEach((tag) => meta.push({ property: 'article:tag', content: tag }));
+    return meta;
+  }, [article]);
+
+  const seoTitle = article?.title || 'UPSC Current Affairs Article';
+
   if (loading) {
     return (
-      <main className="main-content">
-        <div className="page-layout">
-          <p>Loading...</p>
-        </div>
-      </main>
+      <>
+        <Seo
+          title={seoTitle}
+          description={articleSeoDescription}
+          keywords={articleKeywords}
+          canonicalPath={canonicalPath}
+          ogType="article"
+          structuredData={structuredData}
+          additionalMeta={articleAdditionalMeta}
+        />
+        <main className="main-content">
+          <div className="page-layout">
+            <p>Loading...</p>
+          </div>
+        </main>
+      </>
     );
   }
 
   if (error) {
     return (
-      <main className="main-content">
-        <div className="article-error-overlay">
-          <div className="article-error-modal">
-            <h2>No Article Available</h2>
-            <p>{error}</p>
-            <Link to="/recent-articles" className="article-error-action">
-              Browse Recent Articles
-            </Link>
+      <>
+        <Seo
+          title="Article not found"
+          description={error}
+          canonicalPath={canonicalPath}
+          ogType="article"
+          noIndex
+        />
+        <main className="main-content">
+          <div className="article-error-overlay">
+            <div className="article-error-modal">
+              <h2>No Article Available</h2>
+              <p>{error}</p>
+              <Link to="/recent-articles" className="article-error-action">
+                Browse Recent Articles
+              </Link>
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </>
     );
   }
 
   return (
-    <main className="main-content">
+    <>
+      <Seo
+        title={seoTitle}
+        description={articleSeoDescription}
+        keywords={articleKeywords}
+        canonicalPath={canonicalPath}
+        ogType="article"
+        structuredData={structuredData}
+        image={article?.imageUrl}
+        additionalMeta={articleAdditionalMeta}
+      />
+      <main className="main-content">
       <div className="page-layout">
         <div className="main-column">
           <article>
@@ -483,7 +621,8 @@ const ArticlePage = () => {
           )}
         </aside>
       </div>
-    </main>
+      </main>
+    </>
   );
 };
 

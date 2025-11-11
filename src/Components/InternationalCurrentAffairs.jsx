@@ -4,11 +4,13 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { ArrowRight } from 'lucide-react';
 import { db } from '../firebase';
 import { formatDate, getDateRange } from '../utils/dateUtils';
-import { ensureArticleHasSlug } from '../utils/articleUtils';
+import { ensureArticleHasSlug, getArticleRelativePath } from '../utils/articleUtils';
 import CommentSystem from './CommentSystem';
 import './Home.css';
 import './RecentArticlesPage.css';
 import './StateArticlesPage.css';
+import Seo from './Seo';
+import { buildBreadcrumbSchema, buildCollectionPageSchema } from '../seo/seoConfig';
 
 const InternationalCurrentAffairs = () => {
   const [articles, setArticles] = useState([]);
@@ -111,8 +113,46 @@ const InternationalCurrentAffairs = () => {
     setIsDateFiltered(false);
   };
 
+  const canonicalPath = '/international-current-affairs';
+  const pageTitle = 'International Current Affairs for UPSC IAS';
+  const pageDescription =
+    'Global developments, diplomacy updates and international relations insights tailored for UPSC IAS aspirants.';
+  const seoKeywords = [
+    'international current affairs',
+    'UPSC IR',
+    'global affairs',
+    'Civic Centre IAS'
+  ];
+
+  const structuredData = useMemo(() => {
+    const breadcrumb = buildBreadcrumbSchema([
+      { name: 'Home', path: '/' },
+      { name: 'International Current Affairs', path: canonicalPath }
+    ]);
+    const collection = buildCollectionPageSchema({
+      title: pageTitle,
+      description: pageDescription,
+      path: canonicalPath,
+      items: articles.slice(0, 10).map((article) => ({
+        title: article.title,
+        path: getArticleRelativePath(article),
+        date: article.date,
+        keywords: ['International Affairs', article.category].filter(Boolean).join(', ')
+      }))
+    });
+    return [breadcrumb, collection].filter(Boolean);
+  }, [articles, canonicalPath, pageDescription, pageTitle]);
+
   return (
-    <main className="main-content recent-articles-page state-articles-page">
+    <>
+      <Seo
+        title={pageTitle}
+        description={pageDescription}
+        keywords={seoKeywords}
+        canonicalPath={canonicalPath}
+        structuredData={structuredData}
+      />
+      <main className="main-content recent-articles-page state-articles-page">
       <div className="page-layout">
         <div className="main-column">
           <div className="main-content-wrapper">
@@ -189,7 +229,8 @@ const InternationalCurrentAffairs = () => {
           </div>
         </aside>
       </div>
-    </main>
+      </main>
+    </>
   );
 };
 

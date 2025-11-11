@@ -10,6 +10,8 @@ import './Home.css'; // Reuse styles from Home
 import './GsArticlesPage.css'; // Import new styles
 import CommentSystem from './CommentSystem';
 import { ensureArticleHasSlug, slugify, getArticleRelativePath } from '../utils/articleUtils';
+import Seo from './Seo';
+import { buildBreadcrumbSchema, buildCollectionPageSchema } from '../seo/seoConfig';
 
 const GS_TAGS = ['GS1', 'GS2', 'GS3', 'GS4'];
 
@@ -178,8 +180,55 @@ const GsArticlesPage = () => {
     setIsDateFiltered(false);
   };
 
+  const canonicalPath = normalizedTagId ? `/gs/${normalizedTagId.toLowerCase()}` : '/gs';
+  const pageTitle = normalizedTagId
+    ? `GS ${normalizedTagId} Articles & Notes`
+    : 'General Studies Articles & Notes';
+  const pageDescription = normalizedTagId
+    ? `Latest UPSC IAS current affairs and mains-ready analysis for GS ${normalizedTagId}.`
+    : 'Curated UPSC IAS General Studies articles, briefs and GS wise dashboards from Civic Centre IAS.';
+  const seoKeywords = normalizedTagId
+    ? [`GS ${normalizedTagId}`, 'UPSC GS notes', 'Civic Centre IAS']
+    : ['General Studies', 'UPSC notes', 'Civic Centre IAS'];
+
+  const structuredData = useMemo(() => {
+    const breadcrumbItems = [
+      { name: 'Home', path: '/' },
+      { name: 'General Studies', path: '/gs' }
+    ];
+    if (normalizedTagId) {
+      breadcrumbItems.push({ name: `GS ${normalizedTagId}`, path: canonicalPath });
+    }
+    const breadcrumb = buildBreadcrumbSchema(breadcrumbItems);
+    const collection = buildCollectionPageSchema({
+      title: pageTitle,
+      description: pageDescription,
+      path: canonicalPath,
+      items: articles.slice(0, 10).map((article) => ({
+        title: article.title,
+        path: getArticleRelativePath(article),
+        date: article.date,
+        keywords: [
+          article.domains?.gs,
+          ...(article.domains?.subjects || [])
+        ]
+          .filter(Boolean)
+          .join(', ')
+      }))
+    });
+    return [breadcrumb, collection].filter(Boolean);
+  }, [articles, canonicalPath, normalizedTagId, pageDescription, pageTitle]);
+
   return (
-    <main className="main-content gs-articles-page">
+    <>
+      <Seo
+        title={pageTitle}
+        description={pageDescription}
+        keywords={seoKeywords}
+        canonicalPath={canonicalPath}
+        structuredData={structuredData}
+      />
+      <main className="main-content gs-articles-page">
       <div className="page-layout">
         <div className="main-column">
           <div className="main-content-wrapper">
@@ -312,7 +361,8 @@ const GsArticlesPage = () => {
           </div>
         </aside>
       </div>
-    </main>
+      </main>
+    </>
   );
 };
 

@@ -4,11 +4,13 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { ArrowRight } from 'lucide-react';
 import { db } from '../firebase';
 import { formatDate, getDateRange } from '../utils/dateUtils';
-import { ensureArticleHasSlug } from '../utils/articleUtils';
+import { ensureArticleHasSlug, getArticleRelativePath } from '../utils/articleUtils';
 import CommentSystem from './CommentSystem';
 import './Home.css';
 import './RecentArticlesPage.css';
 import './StateArticlesPage.css';
+import Seo from './Seo';
+import { buildBreadcrumbSchema, buildCollectionPageSchema } from '../seo/seoConfig';
 
 const STATE_CONFIGS = {
   telangana: {
@@ -147,28 +149,79 @@ const StateArticlesPage = () => {
     setIsDateFiltered(false);
   };
 
+  const fallbackStateLabel = stateConfig?.label || 'State Current Affairs';
+  const canonicalPath = stateId ? `/state/${stateId}` : '/state';
+  const pageTitle = `${fallbackStateLabel} | UPSC State Current Affairs`;
+  const pageDescription =
+    stateConfig?.description ||
+    'State-focused UPSC IAS current affairs, governance updates and schemes curated by Civic Centre IAS.';
+  const seoKeywords = stateConfig
+    ? [stateConfig.label, `${stateConfig.label} news`, 'UPSC state updates']
+    : ['state current affairs', 'regional gs', 'Civic Centre IAS'];
+
+  const structuredData = useMemo(() => {
+    const breadcrumbItems = [
+      { name: 'Home', path: '/' },
+      { name: 'State Current Affairs', path: '/state' }
+    ];
+    if (stateConfig) {
+      breadcrumbItems.push({ name: stateConfig.label, path: canonicalPath });
+    }
+    const breadcrumb = buildBreadcrumbSchema(breadcrumbItems);
+    const collection = stateConfig
+      ? buildCollectionPageSchema({
+          title: `${stateConfig.label} Current Affairs`,
+          description: stateConfig.description,
+          path: canonicalPath,
+          items: articles.slice(0, 10).map((article) => ({
+            title: article.title,
+            path: getArticleRelativePath(article),
+            date: article.date,
+            keywords: [stateConfig.label, article.category].filter(Boolean).join(', ')
+          }))
+        })
+      : null;
+    return [breadcrumb, collection].filter(Boolean);
+  }, [articles, canonicalPath, stateConfig]);
+
   if (!stateConfig) {
     return (
-      <main className="main-content state-articles-page missing-state">
-        <div className="state-page-empty">
-          <div className="section-card">
-            <h2>State Not Found</h2>
-            <p>
-              We couldn&apos;t find a current affairs section for this state yet.
-              Head back to the{' '}
-              <Link to="/" className="inline-link">
-                home page
-              </Link>{' '}
-              to explore other resources.
-            </p>
+      <>
+        <Seo
+          title="State section unavailable"
+          description="We could not find the requested state current affairs section."
+          canonicalPath={canonicalPath}
+          noIndex
+        />
+        <main className="main-content state-articles-page missing-state">
+          <div className="state-page-empty">
+            <div className="section-card">
+              <h2>State Not Found</h2>
+              <p>
+                We couldn&apos;t find a current affairs section for this state yet.
+                Head back to the{' '}
+                <Link to="/" className="inline-link">
+                  home page
+                </Link>{' '}
+                to explore other resources.
+              </p>
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </>
     );
   }
 
   return (
-    <main className="main-content recent-articles-page state-articles-page">
+    <>
+      <Seo
+        title={pageTitle}
+        description={pageDescription}
+        keywords={seoKeywords}
+        canonicalPath={canonicalPath}
+        structuredData={structuredData}
+      />
+      <main className="main-content recent-articles-page state-articles-page">
       <div className="page-layout">
         <div className="main-column">
           <div className="main-content-wrapper">
@@ -257,7 +310,8 @@ const StateArticlesPage = () => {
           </div>
         </aside>
       </div>
-    </main>
+      </main>
+    </>
   );
 };
 
