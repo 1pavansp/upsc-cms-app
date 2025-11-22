@@ -18,19 +18,26 @@ const gsSubjects = {
     'GS4': ['Ethics', 'Integrity', 'Aptitude', 'Case Studies']
 };
 
+// Example APPSC groups and subjects. Adjust these lists as needed.
+const appscGroups = {
+    'GroupI': ['Polity', 'History', 'Economy', 'Geography'],
+    'GroupII': ['General Science', 'Maths', 'Current Affairs'],
+    'GroupIII': ['Public Administration', 'Ethics']
+};
+
+// Example TGPSC groups and subjects. Adjust these lists as needed.
+const tgpscGroups = {
+    'GroupA': ['Telangana Polity', 'Telangana Economy', 'Telangana History'],
+    'GroupB': ['Local Governance', 'Environment', 'Science & Tech']
+};
+
 const CUSTOM_CATEGORY_VALUE = 'custom';
 
-const CATEGORY_OPTIONS = [
-    { value: 'General', label: 'General Current Affairs' },
-    { value: 'National', label: 'National Current Affairs' },
-    { value: 'International', label: 'International Current Affairs' },
-    { value: 'Telangana', label: 'Telangana Current Affairs' },
-    { value: 'Andhra Pradesh', label: 'Andhra Pradesh Current Affairs' },
-    { value: 'GS1', label: 'GS1 Focus' },
-    { value: 'GS2', label: 'GS2 Focus' },
-    { value: 'GS3', label: 'GS3 Focus' },
-    { value: 'GS4', label: 'GS4 Focus' },
-    { value: CUSTOM_CATEGORY_VALUE, label: 'Custom Category' }
+// Top-level category types (three sections: National, International, State)
+const CATEGORY_TYPES = [
+    { value: 'National', label: 'National' },
+    { value: 'International', label: 'International' },
+    { value: 'State', label: 'State/Regional' }
 ];
 
 const CurrentAffairsForm = ({ editingArticle, onUpdateSuccess }) => {
@@ -43,47 +50,71 @@ const CurrentAffairsForm = ({ editingArticle, onUpdateSuccess }) => {
         date: new Date().toISOString().split('T')[0],
         category: 'General',
         examRelevance: { prelims: false, mains: false },
-        domains: { gs: '', subjects: [] },
+        domains: {
+            categoryType: 'National',
+            exams: {
+                upsc: { enabled: false, gs: '', subjects: [] },
+                appsc: { enabled: false, group: '', subjects: [] },
+                tgpsc: { enabled: false, group: '', subjects: [] }
+            }
+        },
         image: null,
         imagePreview: null,
         videoUrl: '',
         pyqs: { prelims: [], mains: [] },
         slug: ''
     });
-    const [categorySelection, setCategorySelection] = useState('General');
-    const [customCategory, setCustomCategory] = useState('');
+    
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-    const isPredefinedCategory = (value) =>
-        CATEGORY_OPTIONS.some(option => option.value !== CUSTOM_CATEGORY_VALUE && option.value === value);
-
     useEffect(() => {
         if (editingArticle) {
+            // Map legacy domains -> new domains shape when possible
+            const legacyDomains = editingArticle.domains || {};
+            const domains = {
+                categoryType: (editingArticle.category || 'National'),
+                exams: {
+                    upsc: { enabled: false, gs: '', subjects: [] },
+                    appsc: { enabled: false, group: '', subjects: [] },
+                    tgpsc: { enabled: false, group: '', subjects: [] }
+                }
+            };
+
+            if (legacyDomains.gs || (legacyDomains.subjects && legacyDomains.subjects.length)) {
+                domains.exams.upsc.enabled = true;
+                domains.exams.upsc.gs = legacyDomains.gs || '';
+                domains.exams.upsc.subjects = legacyDomains.subjects || [];
+            }
+
+            // If editingArticle has an exams shape already, prefer it
+            if (legacyDomains.exams) {
+                domains.categoryType = legacyDomains.categoryType || domains.categoryType;
+                domains.exams = { ...domains.exams, ...legacyDomains.exams };
+            }
+
             setCurrentAffairsData({
                 ...editingArticle,
-                date: editingArticle.date.toDate().toISOString().split('T')[0],
+                date: editingArticle.date && typeof editingArticle.date.toDate === 'function' ? editingArticle.date.toDate().toISOString().split('T')[0] : (editingArticle.date || new Date().toISOString().split('T')[0]),
                 image: null,
                 imagePreview: editingArticle.imageUrl || null,
-                slug: editingArticle.slug || ''
+                slug: editingArticle.slug || '',
+                domains
             });
-            const normalizedCategory = editingArticle.category || 'General';
-            if (isPredefinedCategory(normalizedCategory)) {
-                setCategorySelection(normalizedCategory);
-                setCustomCategory('');
-            } else {
-                setCategorySelection(CUSTOM_CATEGORY_VALUE);
-                setCustomCategory(normalizedCategory);
-            }
         } else {
             setCurrentAffairsData({
                 title: '', summary: '', content: '', date: new Date().toISOString().split('T')[0],
                 category: 'General', examRelevance: { prelims: false, mains: false },
-                domains: { gs: '', subjects: [] }, image: null, imagePreview: null, videoUrl: '',
+                domains: {
+                    categoryType: 'National',
+                    exams: {
+                        upsc: { enabled: false, gs: '', subjects: [] },
+                        appsc: { enabled: false, group: '', subjects: [] },
+                        tgpsc: { enabled: false, group: '', subjects: [] }
+                    }
+                }, image: null, imagePreview: null, videoUrl: '',
                 pyqs: { prelims: [], mains: [] }, slug: ''
             });
-            setCategorySelection('General');
-            setCustomCategory('');
         }
     }, [editingArticle]);
 
@@ -142,16 +173,21 @@ const CurrentAffairsForm = ({ editingArticle, onUpdateSuccess }) => {
                 if (onUpdateSuccess) onUpdateSuccess();
             } else {
                 await addDoc(collection(db, 'current-affairs'), dataToSave);
-                setSnackbar({ open: true, message: 'Current Affairs posted successfully!', severity: 'success' });
-                setCurrentAffairsData({
-                    title: '', summary: '', content: '', date: new Date().toISOString().split('T')[0],
-                    category: 'General', examRelevance: { prelims: false, mains: false },
-                    domains: { gs: '', subjects: [] }, image: null, imagePreview: null, videoUrl: '',
-                    pyqs: { prelims: [], mains: [] }, slug: ''
-                });
-                setCategorySelection('General');
-                setCustomCategory('');
-                setActiveStep(0);
+                    setSnackbar({ open: true, message: 'Current Affairs posted successfully!', severity: 'success' });
+                    setCurrentAffairsData({
+                        title: '', summary: '', content: '', date: new Date().toISOString().split('T')[0],
+                        category: 'General', examRelevance: { prelims: false, mains: false },
+                        domains: {
+                            categoryType: 'National',
+                            exams: {
+                                upsc: { enabled: false, gs: '', subjects: [] },
+                                appsc: { enabled: false, group: '', subjects: [] },
+                                tgpsc: { enabled: false, group: '', subjects: [] }
+                            }
+                        }, image: null, imagePreview: null, videoUrl: '',
+                        pyqs: { prelims: [], mains: [] }, slug: ''
+                    });
+                    setActiveStep(0);
             }
         } catch (error) {
             console.error('Error saving article:', error);
@@ -163,46 +199,87 @@ const CurrentAffairsForm = ({ editingArticle, onUpdateSuccess }) => {
 
     const handleCloseSnackbar = () => setSnackbar({ ...snackbar, open: false });
 
-    const handleDomainChange = (field, value) => {
-        const newDomains = { ...currentAffairsData.domains, [field]: value };
-        if (field === 'gs') {
-            newDomains.subjects = []; // Reset subjects when GS paper changes
-        }
-        setCurrentAffairsData({ ...currentAffairsData, domains: newDomains });
-    };
-
-    const handleSubjectChange = (subject) => {
-        const newSubjects = currentAffairsData.domains.subjects.includes(subject)
-            ? currentAffairsData.domains.subjects.filter(s => s !== subject)
-            : [...currentAffairsData.domains.subjects, subject];
-        handleDomainChange('subjects', newSubjects);
-    };
-
-    const handleCategorySelectionChange = (event) => {
+    // Category type change (National / International / State)
+    const handleCategoryTypeChange = (event) => {
         const value = event.target.value;
-        setCategorySelection(value);
-        if (value === CUSTOM_CATEGORY_VALUE) {
-            setCurrentAffairsData(prev => ({
-                ...prev,
-                category: customCategory
-            }));
-        } else {
-            setCustomCategory('');
-            setCurrentAffairsData(prev => ({
-                ...prev,
-                category: value
-            }));
-        }
+        setCurrentAffairsData(prev => ({ ...prev, category: value, domains: { ...prev.domains, categoryType: value } }));
     };
 
-    const handleCustomCategoryChange = (event) => {
-        const value = event.target.value;
-        setCustomCategory(value);
+    // Toggle exam relevance (enable/disable exam block)
+    const handleExamToggle = (examKey) => {
         setCurrentAffairsData(prev => ({
             ...prev,
-            category: value
+            domains: {
+                ...prev.domains,
+                exams: {
+                    ...prev.domains.exams,
+                    [examKey]: {
+                        ...prev.domains.exams[examKey],
+                        enabled: !prev.domains.exams[examKey].enabled
+                    }
+                }
+            }
         }));
     };
+
+    const handleUPSCChangePaper = (value) => {
+        setCurrentAffairsData(prev => ({
+            ...prev,
+            domains: {
+                ...prev.domains,
+                exams: {
+                    ...prev.domains.exams,
+                    upsc: { ...prev.domains.exams.upsc, gs: value, subjects: [] }
+                }
+            }
+        }));
+    };
+
+    const handleAPPSCGroupChange = (value) => {
+        setCurrentAffairsData(prev => ({
+            ...prev,
+            domains: {
+                ...prev.domains,
+                exams: {
+                    ...prev.domains.exams,
+                    appsc: { ...prev.domains.exams.appsc, group: value, subjects: [] }
+                }
+            }
+        }));
+    };
+
+    const handleTGPSCGroupChange = (value) => {
+        setCurrentAffairsData(prev => ({
+            ...prev,
+            domains: {
+                ...prev.domains,
+                exams: {
+                    ...prev.domains.exams,
+                    tgpsc: { ...prev.domains.exams.tgpsc, group: value, subjects: [] }
+                }
+            }
+        }));
+    };
+
+    const handleExamSubjectToggle = (examKey, subject) => {
+        setCurrentAffairsData(prev => {
+            const exam = prev.domains.exams[examKey];
+            const exists = exam.subjects.includes(subject);
+            const newSubjects = exists ? exam.subjects.filter(s => s !== subject) : [...exam.subjects, subject];
+            return {
+                ...prev,
+                domains: {
+                    ...prev.domains,
+                    exams: {
+                        ...prev.domains.exams,
+                        [examKey]: { ...exam, subjects: newSubjects }
+                    }
+                }
+            };
+        });
+    };
+
+    
 
     // Handlers for PYQs
     const addPYQ = (type) => {
@@ -267,29 +344,127 @@ const CurrentAffairsForm = ({ editingArticle, onUpdateSuccess }) => {
                             </FormControl>
                             <TextField type="date" label="Date" value={currentAffairsData.date} onChange={(e) => setCurrentAffairsData({ ...currentAffairsData, date: e.target.value })} InputLabelProps={{ shrink: true }} required />
                             <FormControl fullWidth>
-                                <InputLabel id="current-affairs-category-label">Category</InputLabel>
+                                <InputLabel id="current-affairs-category-type-label">Category Type</InputLabel>
                                 <Select
-                                    labelId="current-affairs-category-label"
-                                    value={categorySelection}
-                                    label="Category"
-                                    onChange={handleCategorySelectionChange}
+                                    labelId="current-affairs-category-type-label"
+                                    value={currentAffairsData.domains.categoryType}
+                                    label="Category Type"
+                                    onChange={handleCategoryTypeChange}
                                 >
-                                    {CATEGORY_OPTIONS.map(option => (
+                                    {CATEGORY_TYPES.map(option => (
                                         <MenuItem key={option.value} value={option.value}>
                                             {option.label}
                                         </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
-                            {categorySelection === CUSTOM_CATEGORY_VALUE && (
-                                <TextField
-                                    label="Custom Category"
-                                    value={customCategory}
-                                    onChange={handleCustomCategoryChange}
-                                    fullWidth
-                                    required
-                                    placeholder="Enter category name"
-                                />
+
+                            <FormControl component="fieldset" sx={{ mt: 1 }}>
+                                <FormLabel component="legend">Target Exams</FormLabel>
+                                <FormGroup row>
+                                    <FormControlLabel control={<Checkbox checked={currentAffairsData.domains.exams.upsc.enabled} onChange={() => handleExamToggle('upsc')} />} label="UPSC" />
+                                    <FormControlLabel control={<Checkbox checked={currentAffairsData.domains.exams.appsc.enabled} onChange={() => handleExamToggle('appsc')} />} label="APPSC" />
+                                    <FormControlLabel control={<Checkbox checked={currentAffairsData.domains.exams.tgpsc.enabled} onChange={() => handleExamToggle('tgpsc')} />} label="TGPSC" />
+                                </FormGroup>
+                            </FormControl>
+
+                            {/* UPSC block */}
+                            {currentAffairsData.domains.exams.upsc.enabled && (
+                                <Box sx={{ mt: 1 }}>
+                                    <FormControl fullWidth>
+                                        <InputLabel id="upsc-gs-label">UPSC GS Paper</InputLabel>
+                                        <Select
+                                            labelId="upsc-gs-label"
+                                            value={currentAffairsData.domains.exams.upsc.gs}
+                                            label="UPSC GS Paper"
+                                            onChange={(e) => handleUPSCChangePaper(e.target.value)}
+                                        >
+                                            {Object.keys(gsSubjects).map(gs => (
+                                                <MenuItem key={gs} value={gs}>{gs}</MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                    {currentAffairsData.domains.exams.upsc.gs && (
+                                        <FormControl component="fieldset" sx={{ mt: 1 }}>
+                                            <FormLabel component="legend">UPSC Subjects</FormLabel>
+                                            <FormGroup row>
+                                                {gsSubjects[currentAffairsData.domains.exams.upsc.gs].map(subject => (
+                                                    <FormControlLabel
+                                                        key={subject}
+                                                        control={<Checkbox checked={currentAffairsData.domains.exams.upsc.subjects.includes(subject)} onChange={() => handleExamSubjectToggle('upsc', subject)} />}
+                                                        label={subject}
+                                                    />
+                                                ))}
+                                            </FormGroup>
+                                        </FormControl>
+                                    )}
+                                </Box>
+                            )}
+
+                            {/* APPSC block */}
+                            {currentAffairsData.domains.exams.appsc.enabled && (
+                                <Box sx={{ mt: 1 }}>
+                                    <FormControl fullWidth>
+                                        <InputLabel id="appsc-group-label">APPSC Group</InputLabel>
+                                        <Select
+                                            labelId="appsc-group-label"
+                                            value={currentAffairsData.domains.exams.appsc.group}
+                                            label="APPSC Group"
+                                            onChange={(e) => handleAPPSCGroupChange(e.target.value)}
+                                        >
+                                            {Object.keys(appscGroups).map(g => (
+                                                <MenuItem key={g} value={g}>{g}</MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                    {currentAffairsData.domains.exams.appsc.group && (
+                                        <FormControl component="fieldset" sx={{ mt: 1 }}>
+                                            <FormLabel component="legend">APPSC Subjects</FormLabel>
+                                            <FormGroup row>
+                                                {appscGroups[currentAffairsData.domains.exams.appsc.group].map(subject => (
+                                                    <FormControlLabel
+                                                        key={subject}
+                                                        control={<Checkbox checked={currentAffairsData.domains.exams.appsc.subjects.includes(subject)} onChange={() => handleExamSubjectToggle('appsc', subject)} />}
+                                                        label={subject}
+                                                    />
+                                                ))}
+                                            </FormGroup>
+                                        </FormControl>
+                                    )}
+                                </Box>
+                            )}
+
+                            {/* TGPSC block */}
+                            {currentAffairsData.domains.exams.tgpsc.enabled && (
+                                <Box sx={{ mt: 1 }}>
+                                    <FormControl fullWidth>
+                                        <InputLabel id="tgpsc-group-label">TGPSC Group</InputLabel>
+                                        <Select
+                                            labelId="tgpsc-group-label"
+                                            value={currentAffairsData.domains.exams.tgpsc.group}
+                                            label="TGPSC Group"
+                                            onChange={(e) => handleTGPSCGroupChange(e.target.value)}
+                                        >
+                                            {Object.keys(tgpscGroups).map(g => (
+                                                <MenuItem key={g} value={g}>{g}</MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                    {currentAffairsData.domains.exams.tgpsc.group && (
+                                        <FormControl component="fieldset" sx={{ mt: 1 }}>
+                                            <FormLabel component="legend">TGPSC Subjects</FormLabel>
+                                            <FormGroup row>
+                                                {tgpscGroups[currentAffairsData.domains.exams.tgpsc.group].map(subject => (
+                                                    <FormControlLabel
+                                                        key={subject}
+                                                        control={<Checkbox checked={currentAffairsData.domains.exams.tgpsc.subjects.includes(subject)} onChange={() => handleExamSubjectToggle('tgpsc', subject)} />}
+                                                        label={subject}
+                                                    />
+                                                ))}
+                                            </FormGroup>
+                                        </FormControl>
+                                    )}
+                                </Box>
                             )}
 
                             <FormControl fullWidth>
@@ -318,30 +493,6 @@ const CurrentAffairsForm = ({ editingArticle, onUpdateSuccess }) => {
                                     </Box>
                                 )}
                             </FormControl>
-
-                            <FormControl component="fieldset">
-                                <FormLabel component="legend">GS Paper</FormLabel>
-                                <RadioGroup row name="gs-paper" value={currentAffairsData.domains.gs} onChange={(e) => handleDomainChange('gs', e.target.value)}>
-                                    {Object.keys(gsSubjects).map(gs => (
-                                        <FormControlLabel key={gs} value={gs} control={<Radio />} label={gs} />
-                                    ))}
-                                </RadioGroup>
-                            </FormControl>
-
-                            {currentAffairsData.domains.gs && (
-                                <FormControl component="fieldset">
-                                    <FormLabel component="legend">Subjects</FormLabel>
-                                    <FormGroup row>
-                                        {gsSubjects[currentAffairsData.domains.gs].map(subject => (
-                                            <FormControlLabel
-                                                key={subject}
-                                                control={<Checkbox checked={currentAffairsData.domains.subjects.includes(subject)} onChange={() => handleSubjectChange(subject)} name={subject} />}
-                                                label={subject}
-                                            />
-                                        ))}
-                                    </FormGroup>
-                                </FormControl>
-                            )}
 
                         </Box>
                         <Box sx={{ mt: 2 }}>

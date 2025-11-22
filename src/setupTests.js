@@ -1,4 +1,4 @@
-import '@testing-library/jest-dom';
+require('@testing-library/jest-dom'); // ensures matchers are loaded
 
 // Mock Firebase
 jest.mock('./firebase', () => ({
@@ -35,13 +35,25 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
-// Mock localStorage
-const localStorageMock = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
-};
-global.localStorage = localStorageMock;
+// Note: individual tests may set their own `global.localStorage` mock.
+
+// Keep `global.localStorage` and `window.localStorage` in sync so tests that set
+// `global.localStorage = mock` will also affect `window.localStorage` used by
+// browser code. This defines a proxy property on `global` that forwards to
+// `window.localStorage`.
+try {
+  Object.defineProperty(global, 'localStorage', {
+    configurable: true,
+    get() {
+      return window.localStorage;
+    },
+    set(val) {
+      window.localStorage = val;
+      return val;
+    }
+  });
+} catch (e) {
+  // ignore (non-writable environments)
+}
 
 

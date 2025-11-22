@@ -13,7 +13,6 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Twitter, Facebook, Printer } from 'lucide-react';
-import 'react-quill/dist/quill.snow.css';
 import { formatDate } from '../utils/dateUtils';
 import { ensureArticleHasSlug, normalizeFirestoreDate, slugify } from '../utils/articleUtils';
 import './ArticlePage.css';

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ReactQuill from 'react-quill';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../firebase';
-import 'react-quill/dist/quill.snow.css';
+import 'quill/dist/quill.snow.css';
 import './RichTextEditor.css';
 
 const EDITOR_FORMATS = [
