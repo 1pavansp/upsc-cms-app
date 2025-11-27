@@ -1,4 +1,5 @@
 import React from 'react';
+import SafeHtml from './SafeHtml';
 
 const normalizeText = (value = '') => value.toString().trim().toLowerCase();
 
@@ -156,10 +157,7 @@ const Quiz = ({
   return (
     <div className="quiz-content">
       <h4>Question {currentQuestion + 1} of {totalQuestions}</h4>
-      <div
-        className="question-text"
-        dangerouslySetInnerHTML={{ __html: question.question || '' }}
-      />
+      <SafeHtml className="question-text" html={question.question || ''} />
       <ul className="quiz-options">
         {question.options.map((option, idx) => {
           const isSelected = selectionForCurrent === idx;
@@ -190,7 +188,9 @@ const Quiz = ({
               role="button"
               tabIndex={quizSubmitted ? -1 : 0}
             >
-              {option}
+              <div className="quiz-option-content">
+                <SafeHtml html={option || ''} />
+              </div>
             </li>
           );
         })}
@@ -216,10 +216,7 @@ const Quiz = ({
             </>
           )}
           {question.explanation && (
-            <div
-              className="quiz-explanation"
-              dangerouslySetInnerHTML={{ __html: question.explanation }}
-            />
+            <SafeHtml className="quiz-explanation" html={question.explanation} />
           )}
         </div>
       )}

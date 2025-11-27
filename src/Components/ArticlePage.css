@@ -439,6 +439,25 @@
   margin: 2rem 0;
 }
 
+.article-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+}
+
+.article-body table th,
+.article-body table td {
+  border: 1px solid #d1d5db;
+  padding: 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.article-body table th {
+  background: #f3f4f6;
+  font-weight: 700;
+}
+
 .article-body h1,
 .article-body h2,
 .article-body h3 {
@@ -455,7 +474,16 @@
 .article-body ul,
 .article-body ol {
   margin-bottom: 1.5em;
-  padding-left: 1.5em;
+  padding-left: 2rem;
+  list-style-position: outside;
+}
+
+.article-body ul {
+  list-style-type: disc;
+}
+
+.article-body ol {
+  list-style-type: decimal;
 }
 
 .article-body a {

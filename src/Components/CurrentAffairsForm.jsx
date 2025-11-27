@@ -8,6 +8,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RichTextEditor from './RichTextEditor';
+import SeoPreview from './SeoPreview';
 import { generateUniqueSlug } from '../utils/articleUtils';
 import { stripHtml } from '../utils/textUtils';
 
@@ -40,6 +41,39 @@ const CATEGORY_TYPES = [
     { value: 'State', label: 'State/Regional' }
 ];
 
+const toDateTimeLocal = (value) => {
+    if (!value) return '';
+    const date =
+        value instanceof Date
+            ? value
+            : typeof value?.toDate === 'function'
+                ? value.toDate()
+                : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const tzAdjusted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return tzAdjusted.toISOString().slice(0, 16);
+};
+
+const parseDateTimeLocal = (value) => {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const defaultDateString = () => new Date().toISOString().split('T')[0];
+
+const toDateTimeLocalString = (value) => {
+    if (!value) return '';
+    const resolved = value instanceof Date
+        ? value
+        : typeof value?.toDate === 'function'
+            ? value.toDate()
+            : new Date(value);
+    if (Number.isNaN(resolved.getTime())) return '';
+    const local = new Date(resolved.getTime() - resolved.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 16);
+};
+
 const CurrentAffairsForm = ({ editingArticle, onUpdateSuccess }) => {
     const [user] = useAuthState(auth);
     const [activeStep, setActiveStep] = useState(0);
@@ -48,6 +82,9 @@ const CurrentAffairsForm = ({ editingArticle, onUpdateSuccess }) => {
         summary: '',
         content: '',
         date: new Date().toISOString().split('T')[0],
+        status: 'draft',
+        scheduledAt: '',
+        publishedAt: null,
         category: 'General',
         examRelevance: { prelims: false, mains: false },
         domains: {
@@ -62,6 +99,7 @@ const CurrentAffairsForm = ({ editingArticle, onUpdateSuccess }) => {
         imagePreview: null,
         videoUrl: '',
         pyqs: { prelims: [], mains: [] },
+        seo: { metaTitle: '', metaDescription: '', ogImage: '' },
         slug: ''
     });
     

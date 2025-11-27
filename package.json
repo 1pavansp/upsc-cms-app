@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "add-admins": "node scripts/addAdmins.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "jest",
@@ -18,7 +19,9 @@
     "@mui/icons-material": "^5.14.12",
     "@mui/material": "^5.14.12",
     "@mui/styled-engine-sc": "^5.14.12",
+    "dompurify": "^3.3.0",
     "firebase": "^10.4.0",
+    "firebase-admin": "^13.6.0",
     "framer-motion": "^10.16.4",
     "lucide-react": "^0.284.0",
     "quill": "^2.0.3",

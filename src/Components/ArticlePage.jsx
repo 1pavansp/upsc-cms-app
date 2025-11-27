@@ -19,6 +19,7 @@ import './ArticlePage.css';
 import CommentSystem from './CommentSystem';
 import Seo from './Seo';
 import { buildArticleSchema, buildBreadcrumbSchema } from '../seo/seoConfig';
+import SafeHtml from './SafeHtml';
 
 const GS_TAGS = ['GS1', 'GS2', 'GS3', 'GS4'];
 const STATE_TAGS = [
@@ -162,6 +163,8 @@ const ArticlePage = () => {
         }
 
         primaryArticle.date = normalizeFirestoreDate(primaryArticle.date);
+        primaryArticle.publishedAt = normalizeFirestoreDate(primaryArticle.publishedAt);
+        primaryArticle.scheduledAt = normalizeFirestoreDate(primaryArticle.scheduledAt);
 
         try {
           const allArticlesSnapshot = await getDocs(
@@ -288,6 +291,7 @@ const ArticlePage = () => {
       return 'UPSC IAS current affairs deep-dive curated by Civic Centre IAS mentors.';
     }
     return (
+      article.seo?.metaDescription ||
       article.summary ||
       article.excerpt ||
       createArticleExcerpt(article.content) ||
@@ -316,11 +320,11 @@ const ArticlePage = () => {
   const articleSchema = useMemo(() => {
     if (!article) return null;
     return buildArticleSchema({
-      title: article.title,
+      title: article.seo?.metaTitle || article.title,
       description: articleSeoDescription,
       path: canonicalPath,
-      image: article.imageUrl,
-      datePublished: article.date,
+      image: article.seo?.ogImage || article.imageUrl,
+      datePublished: article.publishedAt || article.date,
       keywords: articleKeywords,
       sections: [
         article.domains?.gs,
@@ -338,8 +342,9 @@ const ArticlePage = () => {
   const articleAdditionalMeta = useMemo(() => {
     if (!article) return [];
     const meta = [];
-    if (article.date instanceof Date) {
-      meta.push({ property: 'article:published_time', content: article.date.toISOString() });
+    const published = article.publishedAt || article.date;
+    if (published instanceof Date) {
+      meta.push({ property: 'article:published_time', content: published.toISOString() });
     }
     if (article.domains?.gs) {
       meta.push({ property: 'article:section', content: article.domains.gs });
@@ -352,7 +357,8 @@ const ArticlePage = () => {
     return meta;
   }, [article]);
 
-  const seoTitle = article?.title || 'UPSC Current Affairs Article';
+  const seoTitle = article?.seo?.metaTitle || article?.title || 'UPSC Current Affairs Article';
+  const seoImage = article?.seo?.ogImage || article?.imageUrl;
 
   if (loading) {
     return (
@@ -409,7 +415,7 @@ const ArticlePage = () => {
         canonicalPath={canonicalPath}
         ogType="article"
         structuredData={structuredData}
-        image={article?.imageUrl}
+        image={seoImage}
         additionalMeta={articleAdditionalMeta}
       />
       <main className="main-content">
@@ -455,7 +461,32 @@ const ArticlePage = () => {
               </div>
             )}
 
-            <div className="article-body" dangerouslySetInnerHTML={{ __html: article?.content }} />
+            <SafeHtml className="article-body" html={article?.content || ''} />
+
+            {article?.audioUrl && (
+              <div className="article-audio">
+                <h3>Listen to this article</h3>
+                <audio controls src={article.audioUrl} preload="metadata" />
+              </div>
+            )}
+
+            {article?.translations && (
+              <section className="content-section">
+                <h2 className="content-section-title">Translated versions</h2>
+                {article.translations.te?.contentText && (
+                  <div className="translation-block">
+                    <h4>Telugu</h4>
+                    <p>{article.translations.te.contentText}</p>
+                  </div>
+                )}
+                {article.translations.hi?.contentText && (
+                  <div className="translation-block">
+                    <h4>Hindi</h4>
+                    <p>{article.translations.hi.contentText}</p>
+                  </div>
+                )}
+              </section>
+            )}
 
             <ArticleActions article={article} />
           </article>

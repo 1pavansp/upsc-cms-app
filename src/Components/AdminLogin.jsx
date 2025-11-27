@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { auth } from '../firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './AdminLogin.css';
 
 const AdminLogin = () => {
@@ -9,19 +9,54 @@ const AdminLogin = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+    const [infoMessage, setInfoMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const [isResetMode, setIsResetMode] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+        if (!location.state) return;
+        const { reason, adminError, email: adminEmail, attemptedPath } = location.state;
+
+        // When redirected from ProtectedRoute, surface a clearer reason
+        if (adminError) {
+            setError(`Could not verify admin access: ${adminError}`);
+            setSuccessMessage('');
+            setInfoMessage('');
+        } else if (reason === 'missing-admin-record') {
+            const target = attemptedPath || '/admin/dashboard';
+            const emailLabel = adminEmail ? ` (${adminEmail})` : '';
+            setInfoMessage(`Signed in${emailLabel} but no admin record was found. Ask the owner to add this email to the Firestore "admins" collection (preferably with UID as the doc ID). Attempted page: ${target}`);
+            setError('');
+            setSuccessMessage('');
+        }
+    }, [location.state]);
+
+    const formatLoginError = (err) => {
+        const code = err?.code || '';
+        if (code.includes('too-many-requests')) {
+            return 'Too many attempts. Please wait a moment and try again.';
+        }
+        if (code.includes('network')) {
+            return 'Network error while signing in. Check your connection and try again.';
+        }
+        if (code.includes('invalid-credential') || code.includes('wrong-password')) {
+            return 'Invalid email or password. Please try again.';
+        }
+        return err?.message || 'Login failed. Please try again.';
+    };
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError('');
+        setInfoMessage('');
         try {
             await signInWithEmailAndPassword(auth, email, password);
             navigate('/admin/dashboard'); // Redirect to admin dashboard after successful login
         } catch (error) {
-            setError('Invalid email or password. Please try again.');
+            setError(formatLoginError(error));
             console.error('Login error:', error);
         }
         setLoading(false);
@@ -35,6 +70,7 @@ const AdminLogin = () => {
         }
         setLoading(true);
         setError('');
+        setInfoMessage('');
         try {
             await sendPasswordResetEmail(auth, email);
             setSuccessMessage('Password reset email sent. Please check your inbox.');
@@ -52,6 +88,7 @@ const AdminLogin = () => {
                 <h2>{isResetMode ? 'Reset Password' : 'Admin Login'}</h2>
                 {error && <div className="error-message">{error}</div>}
                 {successMessage && <div className="success-message">{successMessage}</div>}
+                {infoMessage && <div className="info-message">{infoMessage}</div>}
                 
                 {isResetMode ? (
                     <form onSubmit={handleResetPassword}>
